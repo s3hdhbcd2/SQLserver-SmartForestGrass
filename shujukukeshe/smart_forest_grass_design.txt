@@ -1,0 +1,260 @@
+# 智慧林草系统-灾害预警业务线数据库设计
+
+## 1. 实体分析
+根据灾害预警业务线需求，识别出以下核心实体：
+
+### 1.1 预警规则（WarningRule）
+- 描述：定义灾害预警的触发条件和级别
+- 核心属性：规则编号、预警类型、触发条件、预警级别、生效状态
+
+### 1.2 预警记录（WarningRecord）
+- 描述：记录实际触发的预警信息
+- 核心属性：预警编号、触发规则编号、涉及区域编号、触发时间、预警内容、处理状态、处理人ID、处理结果
+
+### 1.3 通知记录（NotificationRecord）
+- 描述：记录预警通知的发送情况
+- 核心属性：通知编号、预警编号、接收人ID、通知方式、发送时间、接收状态
+
+### 1.4 用户（User）
+- 描述：系统用户，包括管理员、预警处理人员等
+- 核心属性：用户ID、用户名、密码、姓名、联系方式、角色、状态
+
+### 1.5 区域（region）
+- 描述：林草资源所在的区域
+- 核心属性：区域ID、区域名称、区域类型、经度、纬度、负责人ID、创建时间
+
+### 1.6 监测数据（MonitoringData）
+- 描述：记录区域内的环境监测数据
+- 核心属性：数据ID、传感器ID、区域ID、监测时间、温度、湿度、风速、降雨量、病虫害值、烟雾值、土壤湿度
+
+### 1.7 设备巡检记录（EquipmentInspection）
+- 描述：记录设备巡检与维护情况
+- 核心属性：巡检ID、设备ID、巡检时间、巡检人ID、维护类型、巡检结果、问题描述、维护内容、维护结果
+
+### 1.8 林草资源（ForestResource）
+- 描述：记录区域内林草资源信息
+- 核心属性：资源ID、区域ID、资源类型、覆盖面积、树种、生长状态、更新时间、更新人ID
+
+### 1.9 传感器（Sensor）
+- 描述：环境监测传感器的基础信息
+- 核心属性：传感器编号、部署区域、设备型号、监测类型、安装时间、通信协议
+
+### 1.10 设备档案（DeviceArchive）
+- 描述：记录所有设备的基本信息和档案
+- 核心属性：设备编号、设备名称、设备类型、型号规格、采购时间、安装区域编号、安装人员ID、质保期
+
+### 1.11 设备状态数据（DeviceStatus）
+- 描述：记录设备的实时运行状态
+- 核心属性：状态ID、设备编号、采集时间、运行状态、电池电量、信号强度
+
+### 1.12 资源变动记录（ResourceChangeRecord）
+- 描述：记录林草资源的变动情况
+- 核心属性：变动ID、资源ID、变动类型、变动原因、变动时间、操作人ID
+
+### 1.13 统计报表模板（ReportTemplate）
+- 描述：定义统计报表的格式和内容
+- 核心属性：模板编号、报表名称、报表类型、统计指标、描述、创建时间
+
+### 1.14 生成报表数据（GeneratedReport）
+- 描述：记录系统自动生成的报表信息
+- 核心属性：报表编号、报表名称、模板编号、区域ID、开始时间、结束时间、报表内容、报表文件路径、生成时间、生成人ID
+
+## 2. 数据库表结构设计
+
+### 2.1 预警规则表（WarningRule）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| RuleID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 规则编号 |
+| WarningType | VARCHAR(50) | VARCHAR(50) | NOT NULL | 预警类型（火灾/旱情/病虫害等） |
+| TriggerCondition | TEXT | TEXT | NOT NULL | 触发条件（如温度≥38℃且湿度≤20%） |
+| WarningLevel | VARCHAR(20) | VARCHAR(20) | NOT NULL | 预警级别（一般/较重/严重/特别严重） |
+| IsActive | BIT | BIT | NOT NULL DEFAULT 1 | 生效状态（1:生效，0:失效） |
+
+### 2.2 预警记录表（WarningRecord）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| WarningID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 预警编号 |
+| RuleID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES WarningRule(RuleID) | 触发规则编号 |
+| region_id | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES region(region_id) | 涉及区域ID |
+| TriggerTime | DATETIME | DATETIME | NOT NULL | 触发时间 |
+| WarningContent | TEXT | TEXT | NOT NULL | 预警内容 |
+| Status | VARCHAR(20) | VARCHAR(20) | NOT NULL DEFAULT '未处理' | 处理状态（未处理/处理中/已结案） |
+| HandlerID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES User(UserID) | 处理人ID |
+| HandleResult | TEXT | TEXT | | 处理结果 |
+
+### 2.3 通知记录表（NotificationRecord）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| NotificationID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 通知编号 |
+| WarningID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES WarningRecord(WarningID) | 预警编号 |
+| ReceiverID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES User(UserID) | 接收人ID |
+| NotificationMethod | VARCHAR(20) | VARCHAR(20) | NOT NULL | 通知方式（短信/系统消息） |
+| SendTime | DATETIME | DATETIME | NOT NULL | 发送时间 |
+| ReceiveStatus | VARCHAR(20) | VARCHAR(20) | NOT NULL DEFAULT '已发送' | 接收状态（已发送/已接收/未接收） |
+
+### 2.4 用户表（User）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| UserID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 用户ID |
+| Username | VARCHAR(50) | VARCHAR(50) | NOT NULL UNIQUE | 用户名 |
+| Password | VARCHAR(100) | VARCHAR(100) | NOT NULL | 密码（加密存储） |
+| Name | VARCHAR(50) | VARCHAR(50) | NOT NULL | 姓名 |
+| Contact | VARCHAR(50) | VARCHAR(50) | NOT NULL | 联系方式 |
+| Role | VARCHAR(20) | VARCHAR(20) | NOT NULL | 角色（系统管理员/数据管理员/区域护林员/公众用户/监管人员） |
+| Status | VARCHAR(20) | VARCHAR(20) | NOT NULL DEFAULT '启用' | 状态（启用/禁用） |
+
+### 2.5 区域表（region）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| region_id | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 区域ID |
+| region_name | NVARCHAR(100) | TEXT | NOT NULL | 区域名称 |
+| region_type | NVARCHAR(20) | TEXT | NOT NULL | 区域类型（直辖市/市辖区等） |
+| longitude | DECIMAL(10,6) | REAL | NOT NULL | 经度 |
+| latitude | DECIMAL(10,6) | REAL | NOT NULL | 纬度 |
+| manager_id | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES User(UserID) | 负责人ID |
+| create_time | DATETIME | TEXT | NOT NULL DEFAULT GETDATE() (SQL Server) / CURRENT_TIMESTAMP (SQLite) | 创建时间 |
+
+### 2.6 监测数据表（MonitoringData）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| DataID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 数据ID |
+| SensorID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES Sensor(SensorID) | 传感器编号 |
+| region_id | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES region(region_id) | 区域ID |
+| DataTime | DATETIME | DATETIME | NOT NULL | 监测时间 |
+| Temperature | DECIMAL(5,2) | DECIMAL(5,2) | | 温度（℃） |
+| Humidity | DECIMAL(5,2) | DECIMAL(5,2) | | 湿度（%） |
+| WindSpeed | DECIMAL(5,2) | DECIMAL(5,2) | | 风速（m/s） |
+| Rainfall | DECIMAL(5,2) | DECIMAL(5,2) | | 降雨量（mm） |
+| PestDiseaseValue | INT | INT | | 病虫害指数 |
+| SmokeValue | INT | INT | | 烟雾值 |
+| SoilMoisture | DECIMAL(5,2) | DECIMAL(5,2) | | 土壤湿度（%） |
+| ImagePath | VARCHAR(255) | TEXT | | 图像存储路径 |
+| DataStatus | VARCHAR(20) | TEXT | NOT NULL DEFAULT '有效' | 数据状态（有效/无效） |
+
+### 2.7 设备巡检记录表（EquipmentInspection）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| InspectionID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 巡检ID |
+| DeviceID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES DeviceArchive(DeviceID) | 设备编号 |
+| InspectionTime | DATETIME | DATETIME | NOT NULL | 巡检时间 |
+| InspectorID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES User(UserID) | 巡检人ID |
+| MaintenanceType | VARCHAR(20) | TEXT | NOT NULL | 维护类型（巡检/维修/更换） |
+| InspectionResult | VARCHAR(20) | TEXT | NOT NULL | 巡检结果 |
+| ProblemDescription | TEXT | TEXT | | 问题描述 |
+| MaintenanceContent | TEXT | TEXT | | 维护内容 |
+| MaintenanceResult | TEXT | TEXT | | 维护结果 |
+
+### 2.8 林草资源表（ForestResource）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| ResourceID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 资源ID |
+| region_id | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES region(region_id) | 区域ID |
+| ResourceType | VARCHAR(50) | VARCHAR(50) | NOT NULL | 资源类型 |
+| CoverageArea | DECIMAL(10,2) | DECIMAL(10,2) | NOT NULL | 覆盖面积（平方公里） |
+| TreeSpecies | VARCHAR(100) | VARCHAR(100) | | 树种 |
+| GrowthStatus | VARCHAR(50) | VARCHAR(50) | NOT NULL | 生长状态 |
+| UpdateTime | DATETIME | DATETIME | NOT NULL | 更新时间 |
+| UpdatedBy | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES User(UserID) | 更新人ID |
+
+### 2.9 传感器表（Sensor）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| SensorID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 传感器编号 |
+| region_id | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES region(region_id) | 部署区域ID |
+| DeviceModel | VARCHAR(50) | VARCHAR(50) | NOT NULL | 设备型号 |
+| MonitoringType | VARCHAR(20) | VARCHAR(20) | NOT NULL | 监测类型（温度/湿度/图像等） |
+| InstallTime | DATETIME | DATETIME | NOT NULL | 安装时间 |
+| CommunicationProtocol | VARCHAR(20) | VARCHAR(20) | NOT NULL | 通信协议 |
+
+### 2.10 设备档案表（DeviceArchive）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| DeviceID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 设备编号 |
+| DeviceName | VARCHAR(100) | VARCHAR(100) | NOT NULL | 设备名称 |
+| DeviceType | VARCHAR(20) | VARCHAR(20) | NOT NULL | 设备类型（传感器/摄像头/预警器） |
+| ModelSpecification | VARCHAR(100) | VARCHAR(100) | NOT NULL | 型号规格 |
+| PurchaseTime | DATETIME | DATETIME | NOT NULL | 采购时间 |
+| region_id | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES region(region_id) | 安装区域编号 |
+| InstallerID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES User(UserID) | 安装人员ID |
+| WarrantyPeriod | VARCHAR(20) | VARCHAR(20) | NOT NULL | 质保期 |
+
+### 2.11 设备状态数据表（DeviceStatus）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| StatusID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 状态ID |
+| DeviceID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES DeviceArchive(DeviceID) | 设备编号 |
+| CollectionTime | DATETIME | DATETIME | NOT NULL | 采集时间 |
+| RunningStatus | VARCHAR(20) | VARCHAR(20) | NOT NULL | 运行状态（正常/故障/离线） |
+| BatteryLevel | DECIMAL(5,2) | DECIMAL(5,2) | | 电池电量（%） |
+| SignalStrength | INT | INT | | 信号强度 |
+
+### 2.12 资源变动记录表（ResourceChangeRecord）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| ChangeID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 变动编号 |
+| ResourceID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES ForestResource(ResourceID) | 资源编号 |
+| ChangeType | VARCHAR(20) | VARCHAR(20) | NOT NULL | 变动类型（新增/减少/状态更新） |
+| ChangeReason | TEXT | TEXT | NOT NULL | 变动原因 |
+| ChangeTime | DATETIME | DATETIME | NOT NULL | 变动时间 |
+| OperatorID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES User(UserID) | 操作人ID |
+
+### 2.13 统计报表模板表（ReportTemplate）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| TemplateID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 模板编号 |
+| ReportName | VARCHAR(100) | VARCHAR(100) | NOT NULL | 报表名称 |
+| ReportType | VARCHAR(50) | VARCHAR(50) | NOT NULL | 报表类型（环境监测/设备状态等） |
+| StatisticalIndicators | TEXT | TEXT | NOT NULL | 统计指标（数据均值/资源总量/预警次数等，JSON格式） |
+| Description | TEXT | TEXT | | 模板描述 |
+| CreateTime | DATETIME | DATETIME | NOT NULL DEFAULT GETDATE() (SQL Server) / CURRENT_TIMESTAMP (SQLite) | 创建时间 |
+
+### 2.14 生成报表数据表（GeneratedReport）
+| 字段名 | 数据类型（SQL Server） | 数据类型（SQLite） | 约束 | 描述 |
+|-------|------------------------|---------------------|------|------|
+| ReportID | VARCHAR(20) | VARCHAR(20) | PRIMARY KEY | 报表编号 |
+| ReportName | VARCHAR(100) | VARCHAR(100) | NOT NULL | 报表名称 |
+| TemplateID | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES ReportTemplate(TemplateID) | 模板编号 |
+| region_id | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES region(region_id) | 区域ID |
+| StartTime | DATETIME | DATETIME | NOT NULL | 开始时间 |
+| EndTime | DATETIME | DATETIME | NOT NULL | 结束时间 |
+| ReportContent | TEXT | TEXT | NOT NULL | 报表内容 |
+| ReportFilePath | VARCHAR(255) | TEXT | NOT NULL | 报表文件路径 |
+| GeneratedTime | DATETIME | DATETIME | NOT NULL DEFAULT GETDATE() (SQL Server) / CURRENT_TIMESTAMP (SQLite) | 生成时间 |
+| GeneratedBy | VARCHAR(20) | VARCHAR(20) | FOREIGN KEY REFERENCES User(UserID) | 生成人ID |
+
+## 3. 关系分析
+1. 预警规则与预警记录：一对多关系（一个规则可以触发多个预警）
+2. 预警记录与通知记录：一对多关系（一个预警可以发送多个通知）
+3. 用户与预警记录：一对多关系（一个用户可以处理多个预警）
+4. 用户与通知记录：一对多关系（一个用户可以接收多个通知）
+5. 用户与区域：一对多关系（一个用户可以负责多个区域）
+6. 区域与预警记录：一对多关系（一个区域可以有多个预警）
+7. 区域与监测数据：一对多关系（一个区域可以有多个监测数据记录）
+8. 区域与设备巡检记录：一对多关系（一个区域可以有多个设备巡检记录）
+9. 区域与林草资源：一对多关系（一个区域可以有多个林草资源记录）
+10. 区域与传感器：一对多关系（一个区域可以部署多个传感器）
+11. 区域与设备档案：一对多关系（一个区域可以安装多个设备）
+12. 区域与生成报表：一对多关系（一个区域可以有多个生成的报表）
+13. 传感器与监测数据：一对多关系（一个传感器可以产生多个监测数据）
+14. 设备档案与设备状态：一对多关系（一个设备可以有多个状态记录）
+15. 设备档案与设备巡检记录：一对多关系（一个设备可以有多个巡检记录）
+16. 林草资源与资源变动记录：一对多关系（一个资源可以有多个变动记录）
+17. 报表模板与生成报表：一对多关系（一个模板可以生成多个报表）
+18. 用户与生成报表：一对多关系（一个用户可以生成多个报表）
+19. 用户与设备档案：一对多关系（一个用户可以安装多个设备）
+20. 用户与林草资源：一对多关系（一个用户可以更新多个林草资源）
+21. 用户与资源变动记录：一对多关系（一个用户可以操作多个资源变动）
+
+## 4. 索引设计
+- 为WarningRule表的WarningType字段创建索引，提高按预警类型查询的效率
+- 为WarningRecord表的TriggerTime和region_id字段创建索引，提高按时间和区域查询的效率
+- 为NotificationRecord表的WarningID和ReceiveStatus字段创建索引，提高按预警和接收状态查询的效率
+- 为MonitoringData表的DataTime和region_id字段创建索引，提高按时间和区域查询监测数据的效率
+- 为region表的region_name和region_type字段创建索引，提高按名称和类型查询区域的效率
+- 为Sensor表的region_id和MonitoringType字段创建索引，提高按区域和监测类型查询传感器的效率
+- 为DeviceArchive表的region_id和DeviceType字段创建索引，提高按区域和设备类型查询设备档案的效率
+- 为DeviceStatus表的DeviceID和CollectionTime字段创建索引，提高按设备和时间查询设备状态的效率
+- 为ForestResource表的region_id和ResourceType字段创建索引，提高按区域和资源类型查询林草资源的效率
+- 为ResourceChangeRecord表的ResourceID和ChangeTime字段创建索引，提高按资源和时间查询变动记录的效率
+- 为ReportTemplate表的ReportType和CreateTime字段创建索引，提高按报表类型和创建时间查询模板的效率
+- 为GeneratedReport表的GeneratedTime和region_id字段创建索引，提高按时间和区域查询生成报表的效率
