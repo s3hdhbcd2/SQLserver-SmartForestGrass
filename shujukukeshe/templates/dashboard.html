@@ -4,7 +4,15 @@
     <div class="navbar">
         <h1>智能森林草原监测预警系统</h1>
         <div class="user-info">
-            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})</span>
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
             <a href="/logout" class="logout-btn">退出登录</a>
         </div>
     </div>

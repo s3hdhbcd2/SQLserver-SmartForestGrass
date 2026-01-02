@@ -4,7 +4,15 @@
     <div class="navbar">
         <h1>智能森林草原监测预警系统</h1>
         <div class="user-info">
-            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})</span>
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
             <a href="/logout" class="logout-btn">退出登录</a>
         </div>
     </div>
@@ -49,27 +57,6 @@
             </div>
             
             <div class="card">
-                <h3>传感器列表</h3>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>传感器ID</th>
-                            <th>设备型号</th>
-                            <th>监测类型</th>
-                            <th>安装时间</th>
-                            <th>通信协议</th>
-                            <th>所属区域</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sensors-table">
-                        <tr>
-                            <td colspan="6" style="text-align: center; color: #999;">点击刷新数据或选择区域查看传感器列表</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="card">
                 <h3>环境数据列表</h3>
                 <div style="margin-bottom: 1rem;">
                     <label for="env-region-select">选择区域：</label>
@@ -89,7 +76,6 @@
                             <th>温度 (°C)</th>
                             <th>湿度 (%)</th>
                             <th>风速 (m/s)</th>
-                            <th>风向</th>
                             <th>降雨量 (mm)</th>
                             <th>监测时间</th>
                         </tr>
@@ -97,11 +83,49 @@
                     <tbody id="environment-data-table">
                         <!-- 数据将通过JavaScript动态加载 -->
                         <tr>
-                            <td colspan="7" style="text-align: center; color: #999;">选择区域和时间范围，点击查询按钮加载数据</td>
+                            <td colspan="6" style="text-align: center; color: #999;">选择区域和时间范围，点击查询按钮加载数据</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
+            
+            <!-- 公众用户异常情况反馈 -->
+            {% if user['Role'] != '区域护林员' %}
+            <div class="card">
+                <h3>林草资源异常情况反馈</h3>
+                <form id="feedback-form">
+                    <div class="form-group">
+                        <label for="feedback-type">异常类型</label>
+                        <select id="feedback-type" name="feedback-type" required>
+                            <option value="火灾">火灾</option>
+                            <option value="病虫害">病虫害</option>
+                            <option value="旱情">旱情</option>
+                            <option value="大风">大风</option>
+                            <option value="洪水">洪水</option>
+                            <option value="其他">其他异常</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-region">发生区域</label>
+                        <select id="feedback-region" name="feedback-region" required>
+                            <option value="">请选择区域</option>
+                            <!-- 区域选项将通过JavaScript动态加载 -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-description">详细描述</label>
+                        <textarea id="feedback-description" name="feedback-description" rows="4" required placeholder="请详细描述您发现的异常情况"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-contact">联系方式</label>
+                        <input type="text" id="feedback-contact" name="feedback-contact" required placeholder="请输入您的联系方式，以便我们与您联系">
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">提交反馈</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
         </div>
     </div>
 {% endblock %}

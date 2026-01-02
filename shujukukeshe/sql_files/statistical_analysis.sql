@@ -1,5 +1,4 @@
 -- 统计分析业务线 - 报表模板表(ReportTemplate)
--- SQL Server版本
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ReportTemplate' AND type = 'U')
 BEGIN
     CREATE TABLE ReportTemplate (
@@ -14,7 +13,6 @@ END
 GO
 
 -- 统计分析业务线 - 生成报表表(GeneratedReport)
--- SQL Server版本
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'GeneratedReport' AND type = 'U')
 BEGIN
     CREATE TABLE GeneratedReport (

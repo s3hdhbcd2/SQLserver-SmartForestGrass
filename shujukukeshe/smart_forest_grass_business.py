@@ -57,11 +57,14 @@ class DatabaseConnection:
         :return: 是否执行成功
         """
         try:
+            # 使用新的游标执行查询，避免共享游标导致的问题
+            cursor = self.connection.cursor()
             if params:
-                self.cursor.execute(sql, params)
+                cursor.execute(sql, params)
             else:
-                self.cursor.execute(sql)
+                cursor.execute(sql)
             self.connection.commit()
+            cursor.close()
             return True
         except Exception as e:
             print(f"执行SQL语句失败: {e}")
@@ -98,12 +101,15 @@ class DatabaseConnection:
             for batch in batches:
                 batch = batch.strip()
                 if batch:
+                    # 使用新的游标执行每个批次，避免共享游标导致的问题
+                    cursor = self.connection.cursor()
                     # 按分号分割批次内的语句
                     statements = batch.split(';')
                     for statement in statements:
                         statement = statement.strip()
                         if statement:
-                            self.cursor.execute(statement)
+                            cursor.execute(statement)
+                    cursor.close()
             
             self.connection.commit()
             return True
@@ -120,11 +126,15 @@ class DatabaseConnection:
         :return: 查询结果
         """
         try:
+            # 使用新的游标执行查询，避免共享游标导致的问题
+            cursor = self.connection.cursor()
             if params:
-                self.cursor.execute(sql, params)
+                cursor.execute(sql, params)
             else:
-                self.cursor.execute(sql)
-            return self.cursor.fetchone()
+                cursor.execute(sql)
+            result = cursor.fetchone()
+            cursor.close()
+            return result
         except Exception as e:
             print(f"查询失败: {e}")
             return None
@@ -137,11 +147,15 @@ class DatabaseConnection:
         :return: 查询结果列表
         """
         try:
+            # 使用新的游标执行查询，避免共享游标导致的问题
+            cursor = self.connection.cursor()
             if params:
-                self.cursor.execute(sql, params)
+                cursor.execute(sql, params)
             else:
-                self.cursor.execute(sql)
-            return self.cursor.fetchall()
+                cursor.execute(sql)
+            result = cursor.fetchall()
+            cursor.close()
+            return result
         except Exception as e:
             print(f"查询失败: {e}")
             return []
@@ -685,6 +699,31 @@ class DisasterWarningDatabase:
         """
         return self.equipment_module.get_device_status(device_id, start_time, end_time)
     
+    # 设备管理业务线 - 设备巡检记录管理
+    def add_equipment_inspection(self, device_id, inspection_time, inspector_id, maintenance_type, inspection_result, problem_description=None, maintenance_content=None, maintenance_result=None):
+        """
+        添加设备巡检记录
+        :param device_id: 设备ID
+        :param inspection_time: 巡检时间
+        :param inspector_id: 巡检人员ID
+        :param maintenance_type: 维护类型
+        :param inspection_result: 巡检结果
+        :param problem_description: 问题描述（可选）
+        :param maintenance_content: 维护内容（可选）
+        :param maintenance_result: 维护结果（可选）
+        :return: 巡检ID
+        """
+        return self.equipment_module.add_equipment_inspection(device_id, inspection_time, inspector_id, maintenance_type, inspection_result, problem_description, maintenance_content, maintenance_result)
+    
+    def get_equipment_inspections(self, device_id=None, inspector_id=None):
+        """
+        获取设备巡检记录
+        :param device_id: 设备ID（可选）
+        :param inspector_id: 巡检人员ID（可选）
+        :return: 设备巡检记录列表
+        """
+        return self.equipment_module.get_equipment_inspections(device_id, inspector_id)
+    
     # 统计分析业务线 - 报表模板管理
     def add_report_template(self, template_name, report_type, statistical_indicators, description=None):
         """
@@ -806,6 +845,111 @@ class DisasterWarningDatabase:
         except Exception as e:
             print(f"获取用户列表失败: {e}")
             return []
+    
+    # 反馈管理功能
+    def add_feedback(self, feedback_type, region_id, description, contact):
+        """
+        添加反馈记录
+        :param feedback_type: 反馈类型
+        :param region_id: 区域ID
+        :param description: 详细描述
+        :param contact: 联系方式
+        :return: 反馈ID
+        """
+        try:
+            # 生成唯一的FeedbackID
+            count = self.db.fetch_one("SELECT COUNT(*) FROM Feedback")[0]
+            feedback_id = f"FB{str(count + 1).zfill(3)}"
+            
+            # 插入反馈记录
+            sql = """
+            INSERT INTO Feedback (FeedbackID, FeedbackType, RegionID, Description, Contact)
+            VALUES (?, ?, ?, ?, ?)
+            """
+            params = (feedback_id, feedback_type, region_id, description, contact)
+            
+            if self.db.execute(sql, params):
+                print(f"反馈添加成功，ID: {feedback_id}")
+                return feedback_id
+            else:
+                return None
+        except Exception as e:
+            print(f"添加反馈失败: {e}")
+            return None
+    
+    def get_feedbacks(self, status=None, region_id=None):
+        """
+        获取反馈列表，支持按状态和区域过滤
+        :param status: 状态（可选）
+        :param region_id: 区域ID（可选）
+        :return: 反馈列表
+        """
+        try:
+            # 使用LEFT JOIN连接Region表，获取区域名称
+            sql = "SELECT f.*, r.RegionName FROM Feedback f LEFT JOIN Region r ON f.RegionID = r.RegionID WHERE 1=1"
+            params = []
+            
+            if status:
+                sql += " AND f.Status = ?"
+                params.append(status)
+            
+            if region_id:
+                sql += " AND f.RegionID = ?"
+                params.append(region_id)
+            
+            sql += " ORDER BY f.SubmitTime DESC"
+            
+            results = self.db.fetch_all(sql, tuple(params))
+            
+            feedback_list = []
+            for row in results:
+                feedback_list.append({
+                    'FeedbackID': row[0],
+                    'FeedbackType': row[1],
+                    'RegionID': row[2],
+                    'RegionName': row[10],  # 添加区域名称
+                    'Description': row[3],
+                    'Contact': row[4],
+                    'SubmitTime': row[5],
+                    'Status': row[6],
+                    'HandlerID': row[7],
+                    'HandleTime': row[8],
+                    'HandleResult': row[9]
+                })
+            
+            return feedback_list
+        except Exception as e:
+            print(f"获取反馈列表失败: {e}")
+            return []
+    
+    def update_feedback_status(self, feedback_id, status, handler_id=None, handle_result=None):
+        """
+        更新反馈状态
+        :param feedback_id: 反馈ID
+        :param status: 状态
+        :param handler_id: 处理人ID（可选）
+        :param handle_result: 处理结果（可选）
+        :return: 是否更新成功
+        """
+        try:
+            sql = "UPDATE Feedback SET Status = ?"
+            params = [status]
+            
+            if handler_id:
+                sql += ", HandlerID = ?, HandleTime = GETDATE()"
+                params.extend([handler_id,])
+            
+            if handle_result:
+                sql += ", HandleResult = ?"
+                params.append(handle_result)
+            
+            sql += " WHERE FeedbackID = ?"
+            params.append(feedback_id)
+            
+            return self.db.execute(sql, params)
+        except Exception as e:
+            print(f"更新反馈状态失败: {e}")
+            return False
     
     # 复杂SQL查询方法 - 覆盖不同业务场景
     def complex_queries(self, query_type, **kwargs):

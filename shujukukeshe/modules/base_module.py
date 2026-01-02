@@ -13,13 +13,57 @@ class BaseModule:
     
     def generate_id(self, prefix):
         """
-        生成唯一ID
+        生成唯一ID（格式与现有数据一致，在现有基础上递增）
         :param prefix: ID前缀
         :return: 唯一ID字符串
         """
-        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-        random_num = str(hash(datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")))[:4]
-        return f"{prefix}{timestamp}{random_num}"
+        # 定义不同前缀对应的ID格式和表名
+        id_formats = {
+            'RULE': { 'table': 'WarningRule', 'column': 'RuleID', 'format': 'WR000' },
+            'WARN': { 'table': 'WarningRecord', 'column': 'WarningID', 'format': 'WRC0000' },
+            'NOTI': { 'table': 'NotificationRecord', 'column': 'NotificationID', 'format': 'NOTI0000' },
+            'DEV': { 'table': 'DeviceArchive', 'column': 'DeviceID', 'format': 'DEV0000' }
+        }
+        
+        # 如果是已知前缀，生成与现有格式一致的ID
+        if prefix in id_formats:
+            format_info = id_formats[prefix]
+            table = format_info['table']
+            column = format_info['column']
+            format_str = format_info['format']
+            
+            try:
+                # 查询现有最大ID
+                sql = f"SELECT MAX({column}) FROM {table}"
+                max_id = self.db.fetch_one(sql)
+                max_id = max_id[0] if max_id else None
+                
+                if max_id:
+                    # 提取数字部分
+                    num_part = ''.join(filter(str.isdigit, max_id))
+                    if num_part:
+                        # 递增数字
+                        new_num = int(num_part) + 1
+                        # 格式化新ID
+                        if format_str == 'WR000':
+                            # RuleID格式：WR001, WR002...
+                            return f"WR{new_num:03d}"
+                        elif format_str == 'WRC0000':
+                            # WarningID格式：WRC0001, WRC0002...
+                            return f"WRC{new_num:04d}"
+                        elif format_str == 'NOTI0000':
+                            # NotificationID格式：NOTI0001, NOTI0002...
+                            return f"NOTI{new_num:04d}"
+                        elif format_str == 'DEV0000':
+                            # DeviceID格式：DEV0001, DEV0002...
+                            return f"DEV{new_num:04d}"
+            except Exception as e:
+                print(f"查询最大ID失败: {e}")
+        
+        # 如果前缀不在已知列表中，或者查询失败，使用默认格式（确保长度不超过20位）
+        timestamp = datetime.datetime.now().strftime("%y%m%d%H%M%S")  # 12位时间戳
+        random_num = str(hash(datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")))[:2]  # 2位随机数
+        return f"{prefix}{timestamp}{random_num}"  # 前缀+12位时间戳+2位随机数，总长度不超过20位
     
     def execute_sql_file(self, file_path):
         """

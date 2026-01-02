@@ -4,10 +4,38 @@
     <div class="navbar">
         <h1>智能森林草原监测预警系统</h1>
         <div class="user-info">
-            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})</span>
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
             <a href="/logout" class="logout-btn">退出登录</a>
         </div>
     </div>
+    
+    <!-- 嵌入用户管理区域数据 -->
+    <div id="user-data" 
+         data-role="{{ user['Role'] }}"
+         data-managed-regions='{{ user.get('ManagedRegions', []) | tojson | safe }}'
+         style="display: none;"></div>
+    
+    <script>
+        /* 从HTML数据属性获取用户信息，包括管理区域 */
+        document.addEventListener('DOMContentLoaded', function() {
+            const userDataElement = document.getElementById('user-data');
+            const role = userDataElement.dataset.role;
+            const managedRegions = JSON.parse(userDataElement.dataset.managedRegions);
+            
+            window.currentUser = {
+                Role: role,
+                ManagedRegions: managedRegions
+            };
+        });
+    </script>
     
     <div class="container">
         <!-- 侧边栏 -->
@@ -29,13 +57,9 @@
                     <div class="form-group">
                         <label for="equipment_type">设备类型</label>
                         <select id="equipment_type" name="equipment_type">
-                            <option value="温度传感器">温度传感器</option>
-                            <option value="湿度传感器">湿度传感器</option>
-                            <option value="风速传感器">风速传感器</option>
-                            <option value="风向传感器">风向传感器</option>
-                            <option value="雨量传感器">雨量传感器</option>
-                            <option value="摄像头">摄像头</option>
-                            <option value="其他">其他设备</option>
+                            <option value="采集设备">采集设备</option>
+                            <option value="监控设备">监控设备</option>
+                            <option value="传感器">传感器</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -74,12 +98,9 @@
                     <label for="device-type-select">设备类型：</label>
                     <select id="device-type-select" style="padding: 0.5rem; margin-right: 1rem;">
                         <option value="">全部类型</option>
-                        <option value="温度传感器">温度传感器</option>
-                        <option value="湿度传感器">湿度传感器</option>
-                        <option value="风速传感器">风速传感器</option>
-                        <option value="风向传感器">风向传感器</option>
-                        <option value="雨量传感器">雨量传感器</option>
-                        <option value="摄像头">摄像头</option>
+                        <option value="采集设备">采集设备</option>
+                        <option value="监控设备">监控设备</option>
+                        <option value="传感器">传感器</option>
                     </select>
 
                 </div>
@@ -149,17 +170,13 @@
                             <input type="text" id="edit-equipment_name" name="equipment_name" placeholder="请输入设备名称">
                         </div>
                         <div class="form-group">
-                            <label for="edit-equipment_type">设备类型</label>
-                            <select id="edit-equipment_type" name="equipment_type">
-                                <option value="温度传感器">温度传感器</option>
-                                <option value="湿度传感器">湿度传感器</option>
-                                <option value="风速传感器">风速传感器</option>
-                                <option value="风向传感器">风向传感器</option>
-                                <option value="雨量传感器">雨量传感器</option>
-                                <option value="摄像头">摄像头</option>
-                                <option value="其他">其他设备</option>
-                            </select>
-                        </div>
+                        <label for="edit-equipment_type">设备类型</label>
+                        <select id="edit-equipment_type" name="equipment_type">
+                            <option value="采集设备">采集设备</option>
+                            <option value="监控设备">监控设备</option>
+                            <option value="传感器">传感器</option>
+                        </select>
+                    </div>
                         <div class="form-group">
                             <label for="edit-installation_location">安装位置</label>
                             <select id="edit-installation_location" name="installation_location">

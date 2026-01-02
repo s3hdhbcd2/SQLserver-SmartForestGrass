@@ -1,20 +1,52 @@
 // 资源管理页面专用JavaScript代码
 
+// 获取当前用户信息（从页面中解析）
+function getCurrentUser() {
+    const userInfoSpan = document.querySelector('.user-info span');
+    if (userInfoSpan) {
+        const text = userInfoSpan.textContent;
+        // 更准确地提取角色，忽略后续括号中的负责区域信息
+        const roleMatch = text.match(/\(([^)]+)\)(?=\(|$)/);
+        if (roleMatch) {
+            const role = roleMatch[1].trim();
+            console.log('提取到的用户角色:', role);
+            return {
+                Role: role
+            };
+        }
+    }
+    console.log('未提取到用户角色');
+    return { Role: '' };
+}
+
 // 保存资源数据，用于编辑时快速获取
 let resourcesData = [];
 
 // 加载资源信息列表
 function loadResources() {
-    const regionId = document.getElementById('resource-region-select').value;
+    // 简化逻辑，直接调用API获取资源列表，不依赖角色判断
+    // 后端会根据用户角色自动过滤资源
     const tableBody = document.getElementById('resources-table');
     tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">数据加载中...</td></tr>';
+    
+    // 获取区域选择器的值
+    let regionId = '';
+    const resourceRegionSelect = document.getElementById('resource-region-select');
+    if (resourceRegionSelect && resourceRegionSelect.style.display !== 'none') {
+        regionId = resourceRegionSelect.value;
+    }
     
     let url = '/api/resource_management/get_resources';
     if (regionId) {
         url += `?region_id=${regionId}`;
+        console.log('调用资源API，指定区域ID:', regionId, 'URL:', url);
+    } else {
+        console.log('调用资源API，获取所有负责区域的资源，URL:', url);
     }
     
-    fetch(url)
+    fetch(url, {
+            credentials: 'include' // 发送cookie，保持登录状态
+        })
         .then(response => response.json())
         .then(data => {
             console.log('获取到的资源信息:', data);
@@ -196,6 +228,7 @@ function submitEditResourceForm() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include', // 发送cookie，保持登录状态
             body: JSON.stringify(resourceData)
         })
         .then(response => response.json())
@@ -230,7 +263,9 @@ function loadResourceChanges() {
         url += `?resource_id=${resourceId}`;
     }
     
-    fetch(url)
+    fetch(url, {
+            credentials: 'include' // 发送cookie，保持登录状态
+        })
         .then(response => response.json())
         .then(data => {
             console.log('获取到的资源变动记录:', data);
@@ -286,6 +321,7 @@ function submitResourceForm() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include', // 发送cookie，保持登录状态
             body: JSON.stringify(resourceData)
         })
         .then(response => response.json())
@@ -312,11 +348,25 @@ function submitResourceForm() {
 function loadRegions() {
     console.log('开始加载区域列表...');
     
-    // 检查是否有区域选择器元素
-    const resourceRegionSelect = document.getElementById('resource-region-select');
-    console.log('资源列表查询区域选择器:', resourceRegionSelect);
+    // 检查当前用户是否是区域护林员
+    const currentUser = getCurrentUser();
+    const isRanger = currentUser.Role === '区域护林员';
     
-    fetch('/api/resource_management/get_regions')
+    if (isRanger) {
+        // 区域护林员需要查询区域选择器，显示它
+        const resourceRegionSelect = document.getElementById('resource-region-select');
+        if (resourceRegionSelect) {
+            resourceRegionSelect.style.display = 'inline-block';
+            const label = resourceRegionSelect.previousElementSibling;
+            if (label && label.textContent.includes('选择区域')) {
+                label.style.display = 'inline-block';
+            }
+        }
+    }
+    
+    fetch('/api/resource_management/get_regions', {
+            credentials: 'include' // 发送cookie，保持登录状态
+        })
         .then(response => {
             console.log('API响应状态:', response.status);
             return response.json();
@@ -333,7 +383,7 @@ function loadRegions() {
             const regionSelects = [
                 {
                     id: 'resource-region-select',
-                    hasAllOption: true
+                    hasAllOption: !isRanger
                 },
                 {
                     id: 'region_id',

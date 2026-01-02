@@ -4,10 +4,41 @@
     <div class="navbar">
         <h1>智能森林草原监测预警系统</h1>
         <div class="user-info">
-            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})</span>
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
             <a href="/logout" class="logout-btn">退出登录</a>
         </div>
     </div>
+    
+    <!-- 嵌入用户管理区域数据 -->
+    <div id="user-data" 
+         data-user-id="{{ user['UserID'] }}"
+         data-role="{{ user['Role'] }}"
+         data-managed-regions='{{ user.get('ManagedRegions', []) | tojson | safe }}'
+         style="display: none;"></div>
+    
+    <script>
+        /* 从HTML数据属性获取用户信息，包括管理区域 */
+        document.addEventListener('DOMContentLoaded', function() {
+            const userDataElement = document.getElementById('user-data');
+            const userId = userDataElement.dataset.userId;
+            const role = userDataElement.dataset.role;
+            const managedRegions = JSON.parse(userDataElement.dataset.managedRegions);
+            
+            window.currentUser = {
+                UserID: userId,
+                Role: role,
+                ManagedRegions: managedRegions
+            };
+        });
+    </script>
     
     <div class="container">
         <!-- 侧边栏 -->
@@ -26,19 +57,25 @@
                         <label for="warning_type">预警类型</label>
                         <select id="warning_type" name="warning_type">
                             <option value="火灾">火灾预警</option>
+                            <option value="旱情">旱情预警</option>
                             <option value="病虫害">病虫害预警</option>
-                            <option value="气象灾害">气象灾害预警</option>
-                            <option value="其他">其他预警</option>
+                            <option value="大风">大风预警</option>
+                            <option value="洪水">洪水预警</option>
+                            <option value="高温">高温预警</option>
+                            <option value="低温">低温预警</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="warning_level">预警级别</label>
-                        <select id="warning_level" name="warning_level">
-                            <option value="红色">红色预警</option>
-                            <option value="橙色">橙色预警</option>
-                            <option value="黄色">黄色预警</option>
-                            <option value="蓝色">蓝色预警</option>
-                        </select>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <select id="warning_level" name="warning_level">
+                                <option value="一般">一般预警</option>
+                                <option value="较重">较重预警</option>
+                                <option value="严重">严重预警</option>
+                                <option value="特别严重">特别严重预警</option>
+                            </select>
+                            <button type="button" class="btn btn-info btn-sm" onclick="openRuleModal()">查询预警规则</button>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="warning_content">预警内容</label>
@@ -57,37 +94,7 @@
                 </form>
             </div>
             
-            <div class="card">
-                <h3>预警规则列表</h3>
-                <div style="margin-bottom: 1rem;">
-                    <label for="rule-type-select">规则类型：</label>
-                    <select id="rule-type-select" style="padding: 0.5rem; margin-right: 1rem;">
-                        <option value="">全部类型</option>
-                        <option value="火灾">火灾预警</option>
-                        <option value="病虫害">病虫害预警</option>
-                        <option value="气象灾害">气象灾害预警</option>
-                        <option value="其他">其他预警</option>
-                    </select>
 
-                </div>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>规则ID</th>
-                            <th>预警类型</th>
-                            <th>预警级别</th>
-                            <th>触发条件</th>
-                            <th>状态</th>
-                        </tr>
-                    </thead>
-                    <tbody id="warning-rules-table">
-                        <!-- 数据将通过JavaScript动态加载 -->
-                        <tr>
-                            <td colspan="5" style="text-align: center; color: #999;">选择规则类型，点击查询按钮加载数据</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
             
             <div class="card">
                 <h3>预警信息列表</h3>
@@ -137,7 +144,7 @@
                         </div>
                         <div class="form-group">
                             <label for="handle-handler_id">处理人ID</label>
-                            <input type="text" id="handle-handler_id" name="handler_id" placeholder="请输入处理人ID" value="U001">
+                            <input type="text" id="handle-handler_id" name="handler_id" placeholder="请输入处理人ID">
                         </div>
                         <div class="form-group">
                             <label for="handle-handle_result">处理结果</label>
@@ -157,6 +164,45 @@
                     <span class="close" onclick="closeDetailModal()">&times;</span>
                     <h3>预警详情</h3>
                     <div id="warning-detail-content" class="detail-content"></div>
+                </div>
+            </div>
+            
+            <!-- 预警规则模态框 -->
+            <div id="warning-rule-modal" class="modal">
+                <div class="modal-content" style="max-width: 800px;">
+                    <span class="close" onclick="closeRuleModal()">&times;</span>
+                    <h3>预警规则查询</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <label for="modal-rule-type-select">规则类型：</label>
+                        <select id="modal-rule-type-select" style="padding: 0.5rem; margin-right: 1rem;">
+                            <option value="">全部类型</option>
+                            <option value="火灾">火灾预警</option>
+                            <option value="旱情">旱情预警</option>
+                            <option value="病虫害">病虫害预警</option>
+                            <option value="大风">大风预警</option>
+                            <option value="洪水">洪水预警</option>
+                            <option value="高温">高温预警</option>
+                            <option value="低温">低温预警</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" onclick="loadRuleModalData()">查询</button>
+                    </div>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>规则ID</th>
+                                <th>预警类型</th>
+                                <th>预警级别</th>
+                                <th>触发条件</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modal-warning-rules-table">
+                            <!-- 数据将通过JavaScript动态加载 -->
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #999;">选择规则类型，点击查询按钮加载数据</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

@@ -15,6 +15,7 @@ PRINT '正在清空现有数据...';
 GO
 
 -- 按外键依赖顺序删除数据
+DELETE FROM Feedback;
 DELETE FROM GeneratedReport;
 DELETE FROM NotificationRecord;
 DELETE FROM EquipmentInspection;
@@ -48,27 +49,27 @@ VALUES
 ('U002', 'data_admin', '123456', '数据管理员', 'data@example.com', '数据管理员', '启用'),
 ('U003', 'ranger1', '123456', '区域护林员1', 'ranger1@example.com', '区域护林员', '启用'),
 ('U004', 'ranger2', '123456', '区域护林员2', 'ranger2@example.com', '区域护林员', '启用'),
-('U005', 'public1', '123456', '公众用户1', 'public1@example.com', '公众用户', '启用'),
-('U006', 'supervisor1', '123456', '监管人员1', 'supervisor1@example.com', '监管人员', '启用'),
-('U007', 'user1', '123456', '公众用户2', 'user1@example.com', '公众用户', '启用'),
-('U008', 'user2', '123456', '公众用户3', 'user2@example.com', '公众用户', '启用'),
-('U009', 'user3', '123456', '公众用户4', 'user3@example.com', '公众用户', '启用'),
-('U010', 'user4', '123456', '公众用户5', 'user4@example.com', '公众用户', '启用'),
-('U011', 'user5', '123456', '公众用户6', 'user5@example.com', '公众用户', '启用'),
-('U012', 'user6', '123456', '公众用户7', 'user6@example.com', '公众用户', '启用'),
-('U013', 'user7', '123456', '公众用户8', 'user7@example.com', '公众用户', '启用'),
-('U014', 'user8', '123456', '公众用户9', 'user8@example.com', '公众用户', '启用'),
-('U015', 'user9', '123456', '公众用户10', 'user9@example.com', '公众用户', '启用'),
-('U016', 'user10', '123456', '公众用户11', 'user10@example.com', '公众用户', '启用'),
-('U017', 'user11', '123456', '公众用户12', 'user11@example.com', '公众用户', '启用'),
-('U018', 'user12', '123456', '公众用户13', 'user12@example.com', '公众用户', '启用'),
-('U019', 'user13', '123456', '公众用户14', 'user13@example.com', '公众用户', '启用'),
-('U020', 'user14', '123456', '公众用户15', 'user14@example.com', '公众用户', '启用'),
-('U021', 'user15', '123456', '公众用户16', 'user15@example.com', '公众用户', '启用'),
-('U022', 'user16', '123456', '公众用户17', 'user16@example.com', '公众用户', '启用'),
-('U023', 'user17', '123456', '公众用户18', 'user17@example.com', '公众用户', '启用'),
-('U024', 'user18', '123456', '公众用户19', 'user18@example.com', '公众用户', '启用'),
-('U025', 'user19', '123456', '公众用户20', 'user19@example.com', '公众用户', '启用');
+('U005', 'ranger3', '123456', '区域护林员3', 'ranger3@example.com', '区域护林员', '启用'),
+('U006', 'ranger4', '123456', '区域护林员4', 'ranger4@example.com', '区域护林员', '启用'),
+('U007', 'ranger5', '123456', '区域护林员5', 'ranger5@example.com', '区域护林员', '启用'),
+('U008', 'ranger6', '123456', '区域护林员6', 'ranger6@example.com', '区域护林员', '启用'),
+('U009', 'supervisor1', '123456', '监管人员1', 'supervisor1@example.com', '监管人员', '启用'),
+('U010', 'public1', '123456', '公众用户1', 'public1@example.com', '公众用户', '启用'),
+('U011', 'user1', '123456', '公众用户2', 'user1@example.com', '公众用户', '启用'),
+('U012', 'user2', '123456', '公众用户3', 'user2@example.com', '公众用户', '启用'),
+('U013', 'user3', '123456', '公众用户4', 'user3@example.com', '公众用户', '启用'),
+('U014', 'user4', '123456', '公众用户5', 'user4@example.com', '公众用户', '启用'),
+('U015', 'user5', '123456', '公众用户6', 'user5@example.com', '公众用户', '启用'),
+('U016', 'user6', '123456', '公众用户7', 'user6@example.com', '公众用户', '启用'),
+('U017', 'user7', '123456', '公众用户8', 'user7@example.com', '公众用户', '启用'),
+('U018', 'user8', '123456', '公众用户9', 'user8@example.com', '公众用户', '启用'),
+('U019', 'user9', '123456', '公众用户10', 'user9@example.com', '公众用户', '启用'),
+('U020', 'user10', '123456', '公众用户11', 'user10@example.com', '公众用户', '启用'),
+('U021', 'user11', '123456', '公众用户12', 'user11@example.com', '公众用户', '启用'),
+('U022', 'user12', '123456', '公众用户13', 'user12@example.com', '公众用户', '启用'),
+('U023', 'user13', '123456', '公众用户14', 'user13@example.com', '公众用户', '启用'),
+('U024', 'user14', '123456', '公众用户15', 'user14@example.com', '公众用户', '启用'),
+('U025', 'user15', '123456', '公众用户16', 'user15@example.com', '公众用户', '启用');
 
 PRINT '用户表数据插入完成！';
 GO
@@ -79,27 +80,27 @@ GO
 
 INSERT INTO Region (RegionID, RegionName, RegionType, Longitude, Latitude, ManagerID, CreateTime)
 VALUES
-('R001', '华北林区', '森林', 116.4074, 39.9042, 'U001', GETDATE()),
-('R002', '东北林区', '森林', 126.6318, 45.7569, 'U001', GETDATE()),
-('R003', '华东林区', '森林', 121.4737, 31.2304, 'U001', GETDATE()),
-('R004', '华南林区', '森林', 113.2644, 23.1291, 'U001', GETDATE()),
-('R005', '西南林区', '森林', 104.0668, 30.5728, 'U001', GETDATE()),
-('R006', '西北林区', '森林', 108.9398, 34.3416, 'U001', GETDATE()),
-('R007', '内蒙古草原', '草原', 111.6708, 40.8183, 'U001', GETDATE()),
-('R008', '新疆草原', '草原', 87.6168, 43.8256, 'U001', GETDATE()),
-('R009', '青藏高原草原', '草原', 91.1175, 29.6469, 'U001', GETDATE()),
-('R010', '黄土高原', '草原', 109.3326, 36.0611, 'U001', GETDATE()),
-('R011', '长江中下游湿地', '湿地', 114.3055, 30.5928, 'U001', GETDATE()),
-('R012', '珠江三角洲', '湿地', 113.2806, 23.1251, 'U001', GETDATE()),
-('R013', '三江源保护区', '保护区', 96.4551, 35.6785, 'U001', GETDATE()),
-('R014', '大熊猫保护区', '保护区', 103.1873, 31.3412, 'U001', GETDATE()),
-('R015', '东北虎保护区', '保护区', 130.9751, 44.7321, 'U001', GETDATE()),
-('R016', '武夷山保护区', '保护区', 117.7103, 27.6503, 'U001', GETDATE()),
-('R017', '长白山保护区', '保护区', 128.1062, 42.0349, 'U001', GETDATE()),
-('R018', '西双版纳保护区', '保护区', 101.2798, 22.0049, 'U001', GETDATE()),
-('R019', '神农架保护区', '保护区', 110.7847, 31.7439, 'U001', GETDATE()),
-('R020', '天山山脉', '森林', 86.9226, 43.8256, 'U001', GETDATE()),
-('R021', '祁连山保护区', '保护区', 98.2062, 38.1736, 'U001', GETDATE());
+('R001', '华北林区', '森林', 116.4074, 39.9042, 'U003', GETDATE()),
+('R002', '东北林区', '森林', 126.6318, 45.7569, 'U004', GETDATE()),
+('R003', '华东林区', '森林', 121.4737, 31.2304, 'U005', GETDATE()),
+('R004', '华南林区', '森林', 113.2644, 23.1291, 'U006', GETDATE()),
+('R005', '西南林区', '森林', 104.0668, 30.5728, 'U007', GETDATE()),
+('R006', '西北林区', '森林', 108.9398, 34.3416, 'U008', GETDATE()),
+('R007', '内蒙古草原', '草原', 111.6708, 40.8183, 'U003', GETDATE()),
+('R008', '新疆草原', '草原', 87.6168, 43.8256, 'U004', GETDATE()),
+('R009', '青藏高原草原', '草原', 91.1175, 29.6469, 'U005', GETDATE()),
+('R010', '黄土高原', '草原', 109.3326, 36.0611, 'U006', GETDATE()),
+('R011', '长江中下游湿地', '湿地', 114.3055, 30.5928, 'U007', GETDATE()),
+('R012', '珠江三角洲', '湿地', 113.2806, 23.1251, 'U008', GETDATE()),
+('R013', '三江源保护区', '保护区', 96.4551, 35.6785, 'U003', GETDATE()),
+('R014', '大熊猫保护区', '保护区', 103.1873, 31.3412, 'U004', GETDATE()),
+('R015', '东北虎保护区', '保护区', 130.9751, 44.7321, 'U005', GETDATE()),
+('R016', '武夷山保护区', '保护区', 117.7103, 27.6503, 'U006', GETDATE()),
+('R017', '长白山保护区', '保护区', 128.1062, 42.0349, 'U007', GETDATE()),
+('R018', '西双版纳保护区', '保护区', 101.2798, 22.0049, 'U008', GETDATE()),
+('R019', '神农架保护区', '保护区', 110.7847, 31.7439, 'U003', GETDATE()),
+('R020', '天山山脉', '森林', 86.9226, 43.8256, 'U004', GETDATE()),
+('R021', '祁连山保护区', '保护区', 98.2062, 38.1736, 'U005', GETDATE());
 
 PRINT '区域表数据插入完成！';
 GO
@@ -145,26 +146,33 @@ GO
 
 INSERT INTO WarningRule (RuleID, WarningType, TriggerCondition, WarningLevel, IsActive)
 VALUES
-('WR001', '火灾', '温度 > 35 AND 湿度 < 30 AND 烟雾 > 50', '严重', 1),
-('WR002', '火灾', '温度 > 30 AND 湿度 < 25 AND 烟雾 > 40', '较重', 1),
-('WR003', '火灾', '温度 > 25 AND 湿度 < 20 AND 烟雾 > 30', '一般', 1),
-('WR004', '旱情', '湿度 < 15 AND 降雨量 < 5', '严重', 1),
-('WR005', '旱情', '湿度 < 20 AND 降雨量 < 10', '较重', 1),
-('WR006', '旱情', '湿度 < 25 AND 降雨量 < 15', '一般', 1),
-('WR007', '病虫害', '病虫害指数 > 80', '严重', 1),
-('WR008', '病虫害', '病虫害指数 > 60', '较重', 1),
-('WR009', '病虫害', '病虫害指数 > 40', '一般', 1),
-('WR010', '大风', '风速 > 20', '严重', 1),
-('WR011', '大风', '风速 > 15', '较重', 1),
-('WR012', '大风', '风速 > 10', '一般', 1),
-('WR013', '洪水', '降雨量 > 50', '严重', 1),
-('WR014', '洪水', '降雨量 > 30', '较重', 1),
-('WR015', '洪水', '降雨量 > 20', '一般', 1),
-('WR016', '高温', '温度 > 40', '严重', 1),
-('WR017', '高温', '温度 > 35', '较重', 1),
-('WR018', '低温', '温度 < -10', '严重', 1),
-('WR019', '低温', '温度 < -5', '较重', 1),
-('WR020', '低温', '温度 < 0', '一般', 1);
+('WR001', '火灾', '温度 > 42 AND 湿度 < 15 AND 烟雾 > 80', '特别严重', 1),
+('WR002', '火灾', '温度 > 35 AND 湿度 < 30 AND 烟雾 > 50', '严重', 1),
+('WR003', '火灾', '温度 > 30 AND 湿度 < 25 AND 烟雾 > 40', '较重', 1),
+('WR004', '火灾', '温度 > 25 AND 湿度 < 20 AND 烟雾 > 30', '一般', 1),
+('WR005', '旱情', '湿度 < 10 AND 降雨量 < 2', '特别严重', 1),
+('WR006', '旱情', '湿度 < 15 AND 降雨量 < 5', '严重', 1),
+('WR007', '旱情', '湿度 < 20 AND 降雨量 < 10', '较重', 1),
+('WR008', '旱情', '湿度 < 25 AND 降雨量 < 15', '一般', 1),
+('WR009', '病虫害', '病虫害指数 > 95', '特别严重', 1),
+('WR010', '病虫害', '病虫害指数 > 80', '严重', 1),
+('WR011', '病虫害', '病虫害指数 > 60', '较重', 1),
+('WR012', '病虫害', '病虫害指数 > 40', '一般', 1),
+('WR013', '大风', '风速 > 30', '特别严重', 1),
+('WR014', '大风', '风速 > 20', '严重', 1),
+('WR015', '大风', '风速 > 15', '较重', 1),
+('WR016', '大风', '风速 > 10', '一般', 1),
+('WR017', '洪水', '降雨量 > 70', '特别严重', 1),
+('WR018', '洪水', '降雨量 > 50', '严重', 1),
+('WR019', '洪水', '降雨量 > 30', '较重', 1),
+('WR020', '洪水', '降雨量 > 20', '一般', 1),
+('WR021', '高温', '温度 > 45', '特别严重', 1),
+('WR022', '高温', '温度 > 40', '严重', 1),
+('WR023', '高温', '温度 > 35', '较重', 1),
+('WR024', '低温', '温度 < -20', '特别严重', 1),
+('WR025', '低温', '温度 < -10', '严重', 1),
+('WR026', '低温', '温度 < -5', '较重', 1),
+('WR027', '低温', '温度 < 0', '一般', 1);
 
 PRINT '预警规则表数据插入完成！';
 GO
@@ -385,6 +393,79 @@ END
 PRINT '生成的报表表数据插入完成！';
 GO
 
+-- 2.13 插入通知记录表(NotificationRecord)数据（30条）
+PRINT '正在插入通知记录表数据...';
+GO
+
+DECLARE @n INT = 1;
+WHILE @n <= 30
+BEGIN
+    INSERT INTO NotificationRecord (NotificationID, WarningID, ReceiverID, NotificationMethod, SendTime, ReceiveStatus)
+    VALUES
+    (
+        'NOT' + RIGHT('0000' + CAST(@n AS VARCHAR(4)), 4),
+        'WRC' + RIGHT('0000' + CAST(((@n - 1) % 30 + 1) AS VARCHAR(4)), 4),
+        'U' + RIGHT('00' + CAST(((@n - 1) % 25 + 1) AS VARCHAR(2)), 3),
+        CASE WHEN @n % 3 = 0 THEN '短信' WHEN @n % 3 = 1 THEN '邮件' ELSE '系统消息' END,
+        DATEADD(HOUR, -@n * 2, GETDATE()),
+        CASE WHEN @n % 4 = 0 THEN '已阅读' WHEN @n % 4 = 1 THEN '已发送' ELSE '未发送' END
+    );
+    SET @n = @n + 1;
+END
+
+PRINT '通知记录表数据插入完成！';
+GO
+
+-- 2.14 插入设备巡检记录表(EquipmentInspection)数据（25条）
+PRINT '正在插入设备巡检记录表数据...';
+GO
+
+DECLARE @o INT = 1;
+WHILE @o <= 25
+BEGIN
+    INSERT INTO EquipmentInspection (InspectionID, DeviceID, InspectionTime, InspectorID, MaintenanceType, InspectionResult, ProblemDescription, MaintenanceContent, MaintenanceResult)
+    VALUES
+    (
+        'EI' + RIGHT('0000' + CAST(@o AS VARCHAR(4)), 4),
+        'D' + RIGHT('00' + CAST(((@o - 1) % 20 + 1) AS VARCHAR(2)), 3),
+        DATEADD(DAY, -@o, GETDATE()),
+        'U' + RIGHT('00' + CAST(((@o - 1) % 25 + 1) AS VARCHAR(2)), 3),
+        CASE WHEN @o % 4 = 0 THEN '定期巡检' WHEN @o % 4 = 1 THEN '故障维修' ELSE '日常维护' END,
+        CASE WHEN @o % 5 = 0 THEN '异常' ELSE '正常' END,
+        CASE WHEN @o % 5 = 0 THEN '设备运行温度偏高' ELSE NULL END,
+        CASE WHEN @o % 5 = 0 THEN '清洁设备散热片，检查风扇' ELSE NULL END,
+        CASE WHEN @o % 5 = 0 THEN '设备温度恢复正常' ELSE NULL END
+    );
+    SET @o = @o + 1;
+END
+
+PRINT '设备巡检记录表数据插入完成！';
+GO
+
+-- 2.15 插入维护记录表(MaintenanceRecord)数据（25条）
+PRINT '正在插入维护记录表数据...';
+GO
+
+DECLARE @p INT = 1;
+WHILE @p <= 25
+BEGIN
+    INSERT INTO MaintenanceRecord (MaintenanceID, DeviceID, MaintenanceType, MaintenanceTime, MaintainerID, MaintenanceContent, MaintenanceResult)
+    VALUES
+    (
+        'MR' + RIGHT('0000' + CAST(@p AS VARCHAR(4)), 4),
+        'D' + RIGHT('00' + CAST(((@p - 1) % 20 + 1) AS VARCHAR(2)), 3),
+        CASE WHEN @p % 4 = 0 THEN '定期维护' WHEN @p % 4 = 1 THEN '故障维修' ELSE '升级维护' END,
+        DATEADD(DAY, -@p * 2, GETDATE()),
+        'U' + RIGHT('00' + CAST(((@p - 1) % 25 + 1) AS VARCHAR(2)), 3),
+        CASE WHEN @p % 3 = 0 THEN '更换设备电池' WHEN @p % 3 = 1 THEN '修复设备传感器' ELSE '升级设备固件' END,
+        CASE WHEN @p % 5 = 0 THEN '部分成功' ELSE '成功' END
+    );
+    SET @p = @p + 1;
+END
+
+PRINT '维护记录表数据插入完成！';
+GO
+
 -- =============================================
 -- 3. 显示插入结果
 -- =============================================
@@ -401,10 +482,13 @@ SELECT 'Region' AS TableName, COUNT(*) AS RecordCount FROM Region;
 SELECT 'Sensor' AS TableName, COUNT(*) AS RecordCount FROM Sensor;
 SELECT 'WarningRule' AS TableName, COUNT(*) AS RecordCount FROM WarningRule;
 SELECT 'WarningRecord' AS TableName, COUNT(*) AS RecordCount FROM WarningRecord;
+SELECT 'NotificationRecord' AS TableName, COUNT(*) AS RecordCount FROM NotificationRecord;
 SELECT 'ForestResource' AS TableName, COUNT(*) AS RecordCount FROM ForestResource;
 SELECT 'ResourceChangeRecord' AS TableName, COUNT(*) AS RecordCount FROM ResourceChangeRecord;
 SELECT 'DeviceArchive' AS TableName, COUNT(*) AS RecordCount FROM DeviceArchive;
 SELECT 'DeviceStatus' AS TableName, COUNT(*) AS RecordCount FROM DeviceStatus;
+SELECT 'EquipmentInspection' AS TableName, COUNT(*) AS RecordCount FROM EquipmentInspection;
+SELECT 'MaintenanceRecord' AS TableName, COUNT(*) AS RecordCount FROM MaintenanceRecord;
 SELECT 'MonitoringData' AS TableName, COUNT(*) AS RecordCount FROM MonitoringData;
 SELECT 'ReportTemplate' AS TableName, COUNT(*) AS RecordCount FROM ReportTemplate;
 SELECT 'GeneratedReport' AS TableName, COUNT(*) AS RecordCount FROM GeneratedReport;

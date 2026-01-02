@@ -1,34 +1,74 @@
 // 灾害预警页面专用JavaScript代码
 
+// 获取当前用户信息（从全局变量或页面中解析）
+function getCurrentUser() {
+    if (window.currentUser) {
+        return window.currentUser;
+    }
+    const userDataElement = document.getElementById('user-data');
+    if (userDataElement) {
+        const userId = userDataElement.dataset.userId;
+        const role = userDataElement.dataset.role;
+        if (userId) {
+            return {
+                UserID: userId,
+                Role: role
+            };
+        }
+    }
+    // 尝试从用户信息文本中解析
+    const userInfoSpan = document.querySelector('.user-info span');
+    if (userInfoSpan) {
+        const text = userInfoSpan.textContent;
+        const roleMatch = text.match(/\(([^)]+)\)/);
+        if (roleMatch) {
+            return {
+                Role: roleMatch[1]
+            };
+        }
+    }
+    return { Role: '' };
+}
+
 // 保存预警数据，用于处理和查看详情时快速获取
 let warningsData = [];
 
 // 加载区域列表
 function loadRegions() {
-    fetch('/api/resource_management/get_regions')
-        .then(response => response.json())
-        .then(data => {
-            console.log('获取到的区域列表:', data);
-            
-            // 填充所有区域选择器
-            const regionSelects = [
-                'affected_area',
-                'warning-region-select'
-            ];
-            
-            regionSelects.forEach(selectId => {
-                const select = document.getElementById(selectId);
-                if (select) {
-                    // 保存当前选中的值
-                    const currentValue = select.value;
-                    
-                    // 清空选择器（除了第一个选项，如果是"全部区域"的话）
-                    if (selectId === 'warning-region-select') {
-                        // 保留"全部区域"选项
-                        select.innerHTML = '<option value="">全部区域</option>';
-                    } else {
-                        select.innerHTML = '<option value="">请选择区域</option>';
-                    }
+    // 获取当前用户信息
+    const currentUser = getCurrentUser();
+    
+    // 区域护林员不需要区域选择（用于查看预警记录），隐藏选择器
+    const warningRegionSelect = document.getElementById('warning-region-select');
+    if (warningRegionSelect) {
+        warningRegionSelect.style.display = 'none';
+        const label = warningRegionSelect.previousElementSibling;
+        if (label && label.textContent.includes('预警区域')) {
+            label.style.display = 'none';
+        }
+    }
+    
+    // 填充影响区域选择器
+    const affectedAreaSelect = document.getElementById('affected_area');
+    if (affectedAreaSelect) {
+        // 清空选择器
+        affectedAreaSelect.innerHTML = '<option value="">请选择区域</option>';
+        
+        // 检查当前用户是否是区域护林员
+        if (currentUser.Role === '区域护林员' && currentUser.ManagedRegions) {
+            // 区域护林员只能看到自己管理的区域
+            currentUser.ManagedRegions.forEach(region => {
+                const option = document.createElement('option');
+                option.value = region.RegionID;
+                option.textContent = region.RegionName;
+                affectedAreaSelect.appendChild(option);
+            });
+        } else {
+            // 非区域护林员可以看到所有区域，需要从API加载
+            fetch('/api/resource_management/get_regions')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('获取到的区域列表:', data);
                     
                     // 填充区域选项
                     if (Array.isArray(data) && data.length > 0) {
@@ -36,71 +76,37 @@ function loadRegions() {
                             const option = document.createElement('option');
                             option.value = region.RegionID || region.region_id;
                             option.textContent = region.RegionName || region.region_name;
-                            select.appendChild(option);
+                            affectedAreaSelect.appendChild(option);
                         });
                     }
-                    
-                    // 恢复之前的选中值
-                    if (currentValue) {
-                        select.value = currentValue;
-                    }
-                }
-            });
-        })
-        .catch(error => {
-            console.error('加载区域列表失败:', error);
-        });
+                })
+                .catch(error => {
+                    console.error('加载区域列表失败:', error);
+                });
+        }
+    }
 }
 
-// 加载预警规则
-function loadWarningRules() {
-    const warningType = document.getElementById('rule-type-select').value;
-    const tableBody = document.getElementById('warning-rules-table');
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">数据加载中...</td></tr>';
-    
-    let url = '/api/disaster_warning/get_warning_rules';
-    if (warningType) {
-        url += `?warning_type=${warningType}`;
-    }
-    
-    fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            console.log('获取到的预警规则:', data);
-            
-            if (!Array.isArray(data) || data.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">未找到匹配的预警规则</td></tr>';
-                return;
-            }
-            
-            let tableHtml = '';
-            data.forEach(rule => {
-                tableHtml += `
-                    <tr>
-                        <td>${rule.RuleID || rule.rule_id || '--'}</td>
-                        <td>${rule.WarningType || rule.warning_type || '--'}</td>
-                        <td>${rule.WarningLevel || rule.warning_level || '--'}</td>
-                        <td>${rule.TriggerCondition || rule.trigger_condition || '--'}</td>
-                        <td>${rule.IsActive === 1 ? '生效' : '失效'}</td>
-                    </tr>
-                `;
-            });
-            
-            tableBody.innerHTML = tableHtml;
-        })
-        .catch(error => {
-            console.error('加载预警规则失败:', error);
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #e74c3c;">数据加载失败，请刷新页面重试</td></tr>';
-        });
-}
+
 
 // 加载预警记录
 function loadWarningRecords() {
-    const regionId = document.getElementById('warning-region-select').value;
     const tableBody = document.getElementById('warning-records-table');
     tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #999;">数据加载中...</td></tr>';
     
-    fetch(`/api/disaster_warning/get_warnings?region_id=${regionId}`)
+    // 获取当前用户
+    const currentUser = getCurrentUser();
+    
+    // 构造API请求URL，区域护林员不需要region_id参数（后端会自动处理）
+    let url = '/api/disaster_warning/get_warnings';
+    
+    // 如果不是区域护林员，则从选择器获取region_id
+    if (currentUser.Role !== '区域护林员') {
+        const regionId = document.getElementById('warning-region-select').value;
+        url += `?region_id=${regionId}`;
+    }
+    
+    fetch(url)
         .then(response => response.json())
         .then(data => {
             console.log('获取到的预警记录:', data);
@@ -121,7 +127,7 @@ function loadWarningRecords() {
                         <td>${warning.WarningType || warning.warning_type || '--'}</td>
                         <td>${warning.WarningLevel || warning.warning_level || '--'}</td>
                         <td>${warning.WarningContent || warning.warning_content || '--'}</td>
-                        <td>${warning.RegionID || warning.region_id || '--'}</td>
+                        <td>${warning.RegionName || warning.region_name || warning.RegionID || warning.region_id || '--'}</td>
                         <td>${warning.TriggerTime || warning.trigger_time || '--'}</td>
                         <td>${warning.Status || warning.status || '--'}</td>
                         <td>
@@ -148,12 +154,33 @@ function submitWarningForm() {
         const formData = new FormData(this);
         const warningData = Object.fromEntries(formData);
         
-        // 这里可以添加提交到服务器的逻辑
         console.log('提交的预警数据:', warningData);
         
-        // 模拟提交成功
-        alert('预警信息发布成功！');
-        this.reset();
+        // 发送请求到服务器
+        fetch('/api/disaster_warning/publish_warning', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(warningData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('服务器返回:', data);
+            
+            if (data.success) {
+                alert('预警信息发布成功！');
+                this.reset();
+                // 刷新预警记录列表
+                loadWarningRecords();
+            } else {
+                alert('预警信息发布失败！' + (data.error || ''));
+            }
+        })
+        .catch(error => {
+            console.error('发布预警失败:', error);
+            alert('预警信息发布失败，请稍后重试！');
+        });
     });
 }
 
@@ -172,7 +199,9 @@ function handleWarning(warningId) {
     // 填充处理模态框表单
     document.getElementById('handle-warning_id').value = warning.WarningID || warning.warning_id;
     document.getElementById('handle-warning_status').value = warning.Status || warning.status || '未处理';
-    document.getElementById('handle-handler_id').value = warning.HandlerID || warning.handler_id || 'U001';
+    // 获取当前登录用户的ID，设置为处理人ID
+    const currentUser = getCurrentUser();
+    document.getElementById('handle-handler_id').value = currentUser.UserID || warning.HandlerID || warning.handler_id || '';
     document.getElementById('handle-handle_result').value = warning.HandleResult || warning.handle_result || '';
     
     // 显示处理模态框
@@ -213,7 +242,7 @@ function viewWarningDetail(warningId) {
         </div>
         <div class="detail-item">
             <label>影响区域</label>
-            <span>${warning.RegionID || warning.region_id || '--'}</span>
+            <span>${warning.RegionName || warning.region_name || warning.RegionID || warning.region_id || '--'}</span>
         </div>
         <div class="detail-item">
             <label>发布时间</label>
@@ -250,10 +279,69 @@ function closeDetailModal() {
     modal.style.display = 'none';
 }
 
+// 打开预警规则模态框
+function openRuleModal() {
+    const modal = document.getElementById('warning-rule-modal');
+    modal.style.display = 'block';
+    // 重置模态框中的选择器和表格
+    document.getElementById('modal-rule-type-select').value = '';
+    const tableBody = document.getElementById('modal-warning-rules-table');
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">选择规则类型，点击查询按钮加载数据</td></tr>';
+}
+
+// 关闭预警规则模态框
+function closeRuleModal() {
+    const modal = document.getElementById('warning-rule-modal');
+    modal.style.display = 'none';
+}
+
+// 加载预警规则到模态框
+function loadRuleModalData() {
+    const warningType = document.getElementById('modal-rule-type-select').value;
+    const tableBody = document.getElementById('modal-warning-rules-table');
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">数据加载中...</td></tr>';
+    
+    let url = '/api/disaster_warning/get_warning_rules';
+    if (warningType) {
+        url += `?warning_type=${warningType}`;
+    }
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            console.log('获取到的预警规则:', data);
+            
+            if (!Array.isArray(data) || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #999;">未找到匹配的预警规则</td></tr>';
+                return;
+            }
+            
+            let tableHtml = '';
+            data.forEach(rule => {
+                tableHtml += `
+                    <tr>
+                        <td>${rule.RuleID || rule.rule_id || '--'}</td>
+                        <td>${rule.WarningType || rule.warning_type || '--'}</td>
+                        <td>${rule.WarningLevel || rule.warning_level || '--'}</td>
+                        <td>${rule.TriggerCondition || rule.trigger_condition || '--'}</td>
+                        <td>${rule.IsActive ? '生效' : '失效'}</td>
+                    </tr>
+                `;
+            });
+            
+            tableBody.innerHTML = tableHtml;
+        })
+        .catch(error => {
+            console.error('加载预警规则失败:', error);
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #e74c3c;">数据加载失败，请刷新页面重试</td></tr>';
+        });
+}
+
 // 点击模态框外部关闭模态框
 window.onclick = function(event) {
     const handleModal = document.getElementById('warning-handle-modal');
     const detailModal = document.getElementById('warning-detail-modal');
+    const ruleModal = document.getElementById('warning-rule-modal');
     
     if (event.target === handleModal) {
         handleModal.style.display = 'none';
@@ -261,6 +349,10 @@ window.onclick = function(event) {
     
     if (event.target === detailModal) {
         detailModal.style.display = 'none';
+    }
+    
+    if (event.target === ruleModal) {
+        ruleModal.style.display = 'none';
     }
 }
 
@@ -326,12 +418,5 @@ window.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // 添加预警规则类型选择器变化事件监听器，自动加载预警规则
-    const ruleTypeSelect = document.getElementById('rule-type-select');
-    if (ruleTypeSelect) {
-        ruleTypeSelect.addEventListener('change', function() {
-            console.log('预警规则类型选择变化，自动加载预警规则...');
-            loadWarningRules();
-        });
-    }
+
 });

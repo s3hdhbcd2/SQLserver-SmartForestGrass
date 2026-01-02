@@ -138,13 +138,14 @@ class DisasterWarningModule(BaseModule):
         :return: 预警记录列表
         """
         try:
-            # 关联查询WarningRecord和WarningRule表，获取预警类型和级别
+            # 关联查询WarningRecord、WarningRule和Region表，获取预警类型、级别和区域名称
             if region_id and region_id.strip():
                 # 如果有区域ID，按区域ID查询
                 sql = """
-                SELECT WR.*, WRU.WarningType, WRU.WarningLevel
+                SELECT WR.*, WRU.WarningType, WRU.WarningLevel, R.RegionName
                 FROM WarningRecord WR
                 JOIN WarningRule WRU ON WR.RuleID = WRU.RuleID
+                LEFT JOIN Region R ON WR.RegionID = R.RegionID
                 WHERE WR.RegionID = ? 
                 ORDER BY WR.TriggerTime DESC
                 """
@@ -152,9 +153,10 @@ class DisasterWarningModule(BaseModule):
             else:
                 # 如果没有区域ID或区域ID为空，查询所有记录
                 sql = """
-                SELECT WR.*, WRU.WarningType, WRU.WarningLevel
+                SELECT WR.*, WRU.WarningType, WRU.WarningLevel, R.RegionName
                 FROM WarningRecord WR
                 JOIN WarningRule WRU ON WR.RuleID = WRU.RuleID
+                LEFT JOIN Region R ON WR.RegionID = R.RegionID
                 ORDER BY WR.TriggerTime DESC
                 """
                 params = ()
@@ -174,7 +176,8 @@ class DisasterWarningModule(BaseModule):
                     'HandlerID': result[6],
                     'HandleResult': result[7],
                     'WarningType': result[8],  # 从WarningRule表获取
-                    'WarningLevel': result[9]   # 从WarningRule表获取
+                    'WarningLevel': result[9],  # 从WarningRule表获取
+                    'RegionName': result[10]    # 从Region表获取
                 })
             return warnings
         except Exception as e:

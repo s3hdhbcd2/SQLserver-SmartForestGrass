@@ -176,6 +176,21 @@ body {
     background-color: #7f8c8d;
 }
 
+.btn-info {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: #2980b9;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
 /* 表格样式 */
 .table {
     width: 100%;

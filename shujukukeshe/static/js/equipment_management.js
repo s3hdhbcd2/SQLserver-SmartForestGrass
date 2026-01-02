@@ -1,70 +1,131 @@
 // 设备管理页面专用JavaScript代码
 
+// 获取当前用户信息（从全局变量或页面中解析）
+function getCurrentUser() {
+    if (window.currentUser) {
+        return window.currentUser;
+    }
+    const userInfoSpan = document.querySelector('.user-info span');
+    if (userInfoSpan) {
+        const text = userInfoSpan.textContent;
+        const roleMatch = text.match(/\(([^)]+)\)/);
+        if (roleMatch) {
+            return {
+                Role: roleMatch[1]
+            };
+        }
+    }
+    return { Role: '' };
+}
+
 // 保存设备数据，用于编辑时快速获取
 let devicesData = [];
 
 // 加载区域列表
 function loadRegions() {
-    fetch('/api/resource_management/get_regions')
-        .then(response => response.json())
-        .then(data => {
-            console.log('获取到的区域列表:', data);
-            
-            // 填充所有区域选择器
-            const regionSelects = [
-                {
-                    id: 'device-region-select',
-                    hasAllOption: true
-                },
-                {
-                    id: 'installation_location',
-                    hasAllOption: false
-                },
-                {
-                    id: 'edit-installation_location',
-                    hasAllOption: false
-                }
-            ];
-            
-            regionSelects.forEach(selectConfig => {
-                const select = document.getElementById(selectConfig.id);
-                if (select) {
-                    // 保存当前选中的值
-                    const currentValue = select.value;
-                    
-                    // 清空选择器
-                    if (selectConfig.hasAllOption) {
-                        // 保留"全部区域"选项
-                        select.innerHTML = '<option value="">全部区域</option>';
-                    } else {
-                        select.innerHTML = '<option value="">请选择区域</option>';
-                    }
-                    
-                    // 填充区域选项
-                    if (Array.isArray(data) && data.length > 0) {
-                        data.forEach(region => {
-                            const option = document.createElement('option');
-                            option.value = region.RegionID || region.region_id;
-                            option.textContent = region.RegionName || region.region_name;
-                            select.appendChild(option);
-                        });
-                    }
-                    
-                    // 恢复之前的选中值
-                    if (currentValue) {
-                        select.value = currentValue;
-                    }
-                }
+    // 获取当前用户信息
+    const currentUser = getCurrentUser();
+    
+    // 区域护林员不需要区域选择（用于查看设备列表），隐藏选择器
+    const deviceRegionSelect = document.getElementById('device-region-select');
+    if (deviceRegionSelect) {
+        if (currentUser.Role === '区域护林员') {
+            deviceRegionSelect.style.display = 'none';
+            const label = deviceRegionSelect.previousElementSibling;
+            if (label && label.textContent.includes('选择区域')) {
+                label.style.display = 'none';
+            }
+        }
+    }
+    
+    // 获取区域列表数据
+    let regionsData = [];
+    
+    if (currentUser.Role === '区域护林员' && currentUser.ManagedRegions) {
+        // 区域护林员只能看到自己管理的区域
+        regionsData = currentUser.ManagedRegions;
+        // 填充安装位置选择器
+        fillRegionSelectors(regionsData, true);
+    } else {
+        // 非区域护林员从API获取所有区域
+        fetch('/api/resource_management/get_regions')
+            .then(response => response.json())
+            .then(data => {
+                console.log('获取到的区域列表:', data);
+                fillRegionSelectors(data, false);
+            })
+            .catch(error => {
+                console.error('加载区域列表失败:', error);
             });
-        })
-        .catch(error => {
-            console.error('加载区域列表失败:', error);
-        });
+    }
+}
+
+// 填充区域选择器
+function fillRegionSelectors(data, isRegionalRanger) {
+    // 填充所有区域选择器
+    const regionSelects = [
+        {
+            id: 'device-region-select',
+            hasAllOption: true
+        },
+        {
+            id: 'installation_location',
+            hasAllOption: false
+        },
+        {
+            id: 'edit-installation_location',
+            hasAllOption: false
+        }
+    ];
+    
+    regionSelects.forEach(selectConfig => {
+        const select = document.getElementById(selectConfig.id);
+        if (select) {
+            // 对于区域护林员，只填充安装位置选择器，不填充设备区域选择器
+            if (isRegionalRanger && selectConfig.id === 'device-region-select') {
+                return;
+            }
+            
+            // 保存当前选中的值
+            const currentValue = select.value;
+            
+            // 清空选择器
+            if (selectConfig.hasAllOption) {
+                // 保留"全部区域"选项
+                select.innerHTML = '<option value="">全部区域</option>';
+            } else {
+                select.innerHTML = '<option value="">请选择区域</option>';
+            }
+            
+            // 填充区域选项
+            if (Array.isArray(data) && data.length > 0) {
+                data.forEach(region => {
+                    const option = document.createElement('option');
+                    option.value = region.RegionID;
+                    option.textContent = region.RegionName;
+                    select.appendChild(option);
+                });
+            }
+            
+            // 恢复之前的选中值
+            if (currentValue) {
+                select.value = currentValue;
+            }
+        }
+    });
 }
 
 // 加载设备档案列表
 function loadDevices() {
-    const regionId = document.getElementById('device-region-select').value;
+    // 检查当前用户是否是区域护林员
+    const currentUser = getCurrentUser();
+    let regionId = '';
+    
+    if (currentUser.Role !== '区域护林员') {
+        // 非区域护林员，使用选择器的值
+        regionId = document.getElementById('device-region-select').value;
+    }
+    
     const deviceType = document.getElementById('device-type-select').value;
     const tableBody = document.getElementById('devices-table');
     tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">数据加载中...</td></tr>';
@@ -305,14 +366,43 @@ function submitDeviceForm() {
             const formData = new FormData(this);
             const deviceData = Object.fromEntries(formData);
             
-            // 这里可以添加提交到服务器的逻辑
             console.log('提交的设备数据:', deviceData);
             
-            // 模拟提交成功
-            alert('设备信息保存成功！');
-            this.reset();
-            // 刷新设备列表
-            loadDevices();
+            // 调用API保存设备信息
+            fetch('/api/equipment_management/add_device', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(deviceData),
+                credentials: 'same-origin' // 确保携带会话信息
+            })
+            .then(response => {
+                console.log('响应状态:', response.status);
+                console.log('响应URL:', response.url);
+                if (!response.ok) {
+                    // 非200响应，尝试读取响应内容
+                    return response.text().then(text => {
+                        throw new Error(`HTTP ${response.status}: ${text}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('设备保存结果:', data);
+                if (data.success) {
+                    alert('设备信息保存成功！');
+                    this.reset();
+                    // 刷新设备列表
+                    loadDevices();
+                } else {
+                    alert('设备信息保存失败：' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('设备保存失败:', error);
+                alert('设备信息保存失败：' + error.message);
+            });
         });
     }
 }
