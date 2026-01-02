@@ -4,7 +4,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Sensor' AND type = 'U')
 BEGIN
     CREATE TABLE Sensor (
         SensorID VARCHAR(20) PRIMARY KEY,
-        region_id VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES region(region_id),
+        RegionID VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES Region(RegionID),
         DeviceModel VARCHAR(50) NOT NULL,
         MonitoringType VARCHAR(20) NOT NULL,
         InstallTime DATETIME NOT NULL,

@@ -16,16 +16,16 @@ GO
 
 -- 基础表 - 区域表(region)
 -- SQL Server版本
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'region' AND type = 'U')
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'Region' AND type = 'U')
 BEGIN
-    CREATE TABLE region (
-        region_id VARCHAR(20) PRIMARY KEY,
-        region_name NVARCHAR(100) NOT NULL,
-        region_type NVARCHAR(20) NOT NULL,
-        longitude DECIMAL(10,6) NOT NULL,
-        latitude DECIMAL(10,6) NOT NULL,
-        manager_id VARCHAR(20) FOREIGN KEY REFERENCES [User](UserID),
-        create_time DATETIME NOT NULL DEFAULT GETDATE()
+    CREATE TABLE Region (
+        RegionID VARCHAR(20) PRIMARY KEY,
+        RegionName NVARCHAR(100) NOT NULL,
+        RegionType NVARCHAR(20) NOT NULL,
+        Longitude DECIMAL(10,6) NOT NULL,
+        Latitude DECIMAL(10,6) NOT NULL,
+        ManagerID VARCHAR(20) FOREIGN KEY REFERENCES [User](UserID),
+        CreateTime DATETIME NOT NULL DEFAULT GETDATE()
     )
 END
 GO

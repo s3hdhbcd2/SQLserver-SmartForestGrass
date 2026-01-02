@@ -99,10 +99,10 @@ class DisasterWarningModule(BaseModule):
         try:
             warning_id = self.generate_id("WARN")
             sql = """
-            INSERT INTO WarningRecord (WarningID, RuleID, region_id, TriggerTime, WarningContent, Status, HandlerID, HandleResult)
+            INSERT INTO WarningRecord (WarningID, RuleID, RegionID, TriggerTime, WarningContent, Status, HandlerID, HandleResult)
             VALUES (?, ?, ?, GETDATE(), ?, ?, ?, ?)
             """
-            params = (warning_id, rule_id, region_id, trigger_time, warning_content, status, handler_id, handle_result)
+            params = (warning_id, rule_id, region_id, warning_content, status, handler_id, handle_result)
             if self.db.execute(sql, params):
                 return warning_id
             return None
@@ -138,12 +138,27 @@ class DisasterWarningModule(BaseModule):
         :return: 预警记录列表
         """
         try:
-            sql = """
-            SELECT * FROM WarningRecord
-            WHERE region_id = ? 
-            ORDER BY TriggerTime DESC
-            """
-            params = (region_id,)
+            # 关联查询WarningRecord和WarningRule表，获取预警类型和级别
+            if region_id and region_id.strip():
+                # 如果有区域ID，按区域ID查询
+                sql = """
+                SELECT WR.*, WRU.WarningType, WRU.WarningLevel
+                FROM WarningRecord WR
+                JOIN WarningRule WRU ON WR.RuleID = WRU.RuleID
+                WHERE WR.RegionID = ? 
+                ORDER BY WR.TriggerTime DESC
+                """
+                params = (region_id,)
+            else:
+                # 如果没有区域ID或区域ID为空，查询所有记录
+                sql = """
+                SELECT WR.*, WRU.WarningType, WRU.WarningLevel
+                FROM WarningRecord WR
+                JOIN WarningRule WRU ON WR.RuleID = WRU.RuleID
+                ORDER BY WR.TriggerTime DESC
+                """
+                params = ()
+            
             results = self.db.fetch_all(sql, params)
             
             warnings = []
@@ -152,12 +167,14 @@ class DisasterWarningModule(BaseModule):
                 warnings.append({
                     'WarningID': result[0],
                     'RuleID': result[1],
-                    'region_id': result[2],
+                    'RegionID': result[2],
                     'TriggerTime': result[3],
                     'WarningContent': result[4],
                     'Status': result[5],
                     'HandlerID': result[6],
-                    'HandleResult': result[7]
+                    'HandleResult': result[7],
+                    'WarningType': result[8],  # 从WarningRule表获取
+                    'WarningLevel': result[9]   # 从WarningRule表获取
                 })
             return warnings
         except Exception as e:
@@ -180,7 +197,7 @@ class DisasterWarningModule(BaseModule):
             INSERT INTO NotificationRecord (NotificationID, WarningID, ReceiverID, NotificationMethod, SendTime, ReceiveStatus)
             VALUES (?, ?, ?, ?, GETDATE(), ?)
             """
-            params = (notification_id, warning_id, receiver_id, notification_method, send_time, receive_status)
+            params = (notification_id, warning_id, receiver_id, notification_method, receive_status)
             if self.db.execute(sql, params):
                 return notification_id
             return None

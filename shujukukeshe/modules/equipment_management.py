@@ -42,7 +42,7 @@ class EquipmentManagementModule(BaseModule):
         try:
             device_id = self.generate_id("DEV")
             sql = """
-            INSERT INTO DeviceArchive (DeviceID, DeviceName, DeviceType, ModelSpecification, PurchaseTime, region_id, InstallerID, WarrantyPeriod)
+            INSERT INTO DeviceArchive (DeviceID, DeviceName, DeviceType, ModelSpecification, PurchaseTime, RegionID, InstallerID, WarrantyPeriod)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """
             params = (device_id, device_name, device_type, model_specification, purchase_time, region_id, installer_id, warranty_period)
@@ -64,10 +64,12 @@ class EquipmentManagementModule(BaseModule):
             conditions = []
             params = []
             
-            if region_id:
-                conditions.append("region_id = ?")
+            # 只有当region_id不为None且不为空字符串时才添加条件
+            if region_id is not None and region_id != "":
+                conditions.append("RegionID = ?")
                 params.append(region_id)
-            if device_type:
+            # 只有当device_type不为None且不为空字符串时才添加条件
+            if device_type is not None and device_type != "":
                 conditions.append("DeviceType = ?")
                 params.append(device_type)
             
@@ -84,7 +86,7 @@ class EquipmentManagementModule(BaseModule):
                     'DeviceType': result[2],
                     'ModelSpecification': result[3],
                     'PurchaseTime': result[4],
-                    'region_id': result[5],
+                    'RegionID': result[5],
                     'InstallerID': result[6],
                     'WarrantyPeriod': result[7]
                 })

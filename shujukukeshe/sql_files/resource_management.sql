@@ -4,7 +4,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ForestResource' AND type =
 BEGIN
     CREATE TABLE ForestResource (
         ResourceID VARCHAR(20) PRIMARY KEY,
-        region_id VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES region(region_id),
+        RegionID VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES Region(RegionID),
         ResourceType VARCHAR(50) NOT NULL,
         TreeSpecies VARCHAR(100),
         Quantity INT,

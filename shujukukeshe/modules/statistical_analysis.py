@@ -165,7 +165,7 @@ class StatisticalAnalysisModule(BaseModule):
             
             # 保存报表信息到数据库 - SQL Server版本
             sql = """
-            INSERT INTO generated_report (report_id, report_name, template_id, region_id, start_time, end_time, report_content, report_file_path, generated_time, generated_by)
+            INSERT INTO GeneratedReport (ReportID, ReportName, TemplateID, RegionID, StartTime, EndTime, ReportContent, ReportFilePath, GeneratedTime, GeneratedBy)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, GETDATE(), ?)
             """
             params = (report_id, report_name, template_id, region_id, start_time, end_time, report_content, report_path, generated_by)
@@ -188,9 +188,9 @@ class StatisticalAnalysisModule(BaseModule):
         try:
             # 获取监测数据
             sql = """
-            SELECT * FROM monitoring_data 
-            WHERE region_id = ? AND data_time BETWEEN ? AND ? 
-            ORDER BY data_time DESC
+            SELECT * FROM MonitoringData 
+            WHERE RegionID = ? AND DataTime BETWEEN ? AND ? 
+            ORDER BY DataTime DESC
             """
             params = (region_id, start_time, end_time)
             results = self.db.fetch_all(sql, params)
@@ -237,8 +237,8 @@ class StatisticalAnalysisModule(BaseModule):
         :return: 报表内容
         """
         try:
-            # 获取设备档案
-            device_sql = "SELECT * FROM device_archive WHERE region_id = ?"
+            # 获取设备列表
+            device_sql = "SELECT * FROM DeviceArchive WHERE RegionID = ?"
             devices = self.db.fetch_all(device_sql, (region_id,))
             
             report = f"设备状态报表\n"
@@ -258,9 +258,9 @@ class StatisticalAnalysisModule(BaseModule):
                 
                 # 获取设备状态
                 status_sql = """
-                SELECT * FROM device_status 
-                WHERE device_id = ? AND collection_time BETWEEN ? AND ? 
-                ORDER BY collection_time DESC
+                SELECT * FROM DeviceStatus 
+                WHERE DeviceID = ? AND CollectionTime BETWEEN ? AND ? 
+                ORDER BY CollectionTime DESC
                 """
                 status_results = self.db.fetch_all(status_sql, (device_id, start_time, end_time))
                 
@@ -299,14 +299,14 @@ class StatisticalAnalysisModule(BaseModule):
         """
         try:
             # 获取林草资源
-            resource_sql = "SELECT * FROM forest_resource WHERE region_id = ?"
+            resource_sql = "SELECT * FROM ForestResource WHERE RegionID = ?"
             resources = self.db.fetch_all(resource_sql, (region_id,))
             
             # 获取资源变动记录
             change_sql = """
-            SELECT * FROM resource_change_record 
-            WHERE resource_id IN (SELECT resource_id FROM forest_resource WHERE region_id = ?) 
-            AND change_time BETWEEN ? AND ?
+            SELECT * FROM ResourceChangeRecord 
+            WHERE resource_id IN (SELECT resource_id FROM ForestResource WHERE RegionID = ?) 
+            AND change_time BETWEEN ? AND ? 
             ORDER BY change_time DESC
             """
             changes = self.db.fetch_all(change_sql, (region_id, start_time, end_time))
@@ -363,7 +363,7 @@ class StatisticalAnalysisModule(BaseModule):
             params = []
             
             if region_id:
-                conditions.append("gr.region_id = ?")
+                conditions.append("gr.RegionID = ?")
                 params.append(region_id)
             if report_type:
                 conditions.append("rt.report_type = ?")
@@ -401,7 +401,7 @@ class StatisticalAnalysisModule(BaseModule):
                     'template_id': result[2],
                     'template_name': result[11],
                     'report_type': result[12],
-                    'region_id': result[3],
+                    'RegionID': result[3],
                     'start_time': result[4],
                     'end_time': result[5],
                     'report_content': result[6],

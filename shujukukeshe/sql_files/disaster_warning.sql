@@ -19,7 +19,7 @@ BEGIN
     CREATE TABLE WarningRecord (
         WarningID VARCHAR(20) PRIMARY KEY,
         RuleID VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES WarningRule(RuleID),
-        region_id VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES region(region_id),
+        RegionID VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES Region(RegionID),
         TriggerTime DATETIME NOT NULL,
         WarningContent TEXT NOT NULL,
         Status VARCHAR(20) NOT NULL DEFAULT '未处理',

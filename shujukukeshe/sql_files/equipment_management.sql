@@ -8,7 +8,7 @@ BEGIN
         DeviceType VARCHAR(20) NOT NULL,
         ModelSpecification VARCHAR(100) NOT NULL,
         PurchaseTime DATETIME NOT NULL,
-        region_id VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES region(region_id),
+        RegionID VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES Region(RegionID),
         InstallerID VARCHAR(20) NOT NULL FOREIGN KEY REFERENCES [User](UserID),
         WarrantyPeriod VARCHAR(20) NOT NULL
     )

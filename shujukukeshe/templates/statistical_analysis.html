@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="navbar">
+        <h1>智能森林草原监测预警系统</h1>
+        <div class="user-info">
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})</span>
+            <a href="/logout" class="logout-btn">退出登录</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu" id="menu"></div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h2 class="page-title">统计分析</h2>
+            
+            <div class="card">
+                <h3>数据统计</h3>
+                <form id="analysis-form">
+                    <div class="form-group">
+                        <label for="analysis_type">分析类型</label>
+                        <select id="analysis_type" name="analysis_type">
+                            <option value="环境数据">环境数据统计</option>
+                            <option value="灾害预警">灾害预警统计</option>
+                            <option value="资源分布">资源分布统计</option>
+                            <option value="设备状态">设备状态统计</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="report-template-select">报表模板：</label>
+                        <select id="report-template-select" name="report_template" style="margin-bottom: 1rem;">
+                            <option value="">加载模板中...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="time_range">时间范围</label>
+                        <select id="time_range" name="time_range">
+                            <option value="今日">今日</option>
+                            <option value="本周">本周</option>
+                            <option value="本月">本月</option>
+                            <option value="本年">本年</option>
+                            <option value="自定义">自定义</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="custom_time_range" style="display: none;">
+                        <div style="display: flex; gap: 1rem;">
+                            <div style="flex: 1;">
+                                <label for="start_date">开始日期</label>
+                                <input type="date" id="start_date" name="start_date">
+                            </div>
+                            <div style="flex: 1;">
+                                <label for="end_date">结束日期</label>
+                                <input type="date" id="end_date" name="end_date">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">生成统计报告</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h3>统计结果展示</h3>
+                <div style="height: 300px; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center;">
+                    <p style="color: #999;">统计图表将在此处显示</p>
+                </div>
+                
+                <div style="margin-top: 1.5rem;">
+                    <h4>统计数据摘要</h4>
+                    <table class="table" style="margin-top: 0.5rem;">
+                        <tbody>
+                            <tr>
+                                <td style="font-weight: 600; width: 150px;">总记录数：</td>
+                                <td id="total_records">0</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600;">平均值：</td>
+                                <td id="average_value">0</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600;">最大值：</td>
+                                <td id="max_value">0</td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: 600;">最小值：</td>
+                                <td id="min_value">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>已生成的报表</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>报表ID</th>
+                            <th>报表名称</th>
+                            <th>报表类型</th>
+                            <th>生成时间</th>
+                            <th>生成人员</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="generated-reports-table">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #999;">报表列表将在此处显示</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- 引入统计分析页面专用JavaScript文件 -->
+    <script src="/static/js/statistical_analysis.js"></script>
+{% endblock %}

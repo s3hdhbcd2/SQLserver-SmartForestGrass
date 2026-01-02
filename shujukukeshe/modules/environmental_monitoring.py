@@ -28,8 +28,7 @@ class EnvironmentalMonitoringModule(BaseModule):
         return True
     
     def add_sensor(self, region_id, device_model, monitoring_type, install_time, communication_protocol):
-        """
-        添加传感器
+        """添加传感器
         :param region_id: 区域ID
         :param device_model: 设备型号
         :param monitoring_type: 监测类型
@@ -38,9 +37,9 @@ class EnvironmentalMonitoringModule(BaseModule):
         :return: 传感器ID
         """
         try:
-            sensor_id = self.generate_id("SEN")
+            sensor_id = f"S{int(time.time())}"
             sql = """
-            INSERT INTO Sensor (SensorID, region_id, DeviceModel, MonitoringType, InstallTime, CommunicationProtocol)
+            INSERT INTO Sensor (SensorID, RegionID, DeviceModel, MonitoringType, InstallTime, CommunicationProtocol)
             VALUES (?, ?, ?, ?, ?, ?)
             """
             params = (sensor_id, region_id, device_model, monitoring_type, install_time, communication_protocol)
@@ -62,7 +61,7 @@ class EnvironmentalMonitoringModule(BaseModule):
             params = []
             
             if region_id:
-                conditions.append("region_id = ?")
+                conditions.append("RegionID = ?")
                 params.append(region_id)
             
             where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
@@ -73,12 +72,12 @@ class EnvironmentalMonitoringModule(BaseModule):
             for result in results:
                 # 使用索引访问，兼容SQL Server
                 sensors.append({
-                    'SensorID': result[0],
-                    'region_id': result[1],
-                    'DeviceModel': result[2],
-                    'MonitoringType': result[3],
-                    'InstallTime': result[4],
-                    'CommunicationProtocol': result[5]
+                    'sensor_id': result[0],
+                    'RegionID': result[1],
+                    'device_model': result[2],
+                    'monitoring_type': result[3],
+                    'install_time': result[4],
+                    'communication_protocol': result[5]
                 })
             return sensors
         except Exception as e:
@@ -106,10 +105,10 @@ class EnvironmentalMonitoringModule(BaseModule):
         try:
             data_id = self.generate_id("DATA")
             sql = """
-            INSERT INTO MonitoringData (DataID, SensorID, region_id, CollectionTime, Temperature, Humidity, 
-                                      WindSpeed, Rainfall, PestDiseaseValue, SmokeValue, 
-                                      SoilMoisture, ImagePath, DataStatus)
-            VALUES (?, ?, ?, GETDATE(), ?, ?, ?, ?, ?, ?, ?, ?, '有效')
+            INSERT INTO MonitoringData (DataID, SensorID, RegionID, DataTime, Temperature, Humidity, 
+                                     WindSpeed, Rainfall, PestDiseaseValue, SmokeValue, 
+                                     SoilMoisture, ImagePath, DataStatus)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '有效')
             """
             params = (data_id, sensor_id, region_id, data_time, temperature, humidity, 
                      wind_speed, rainfall, pest_disease_value, smoke_value, 
@@ -129,12 +128,23 @@ class EnvironmentalMonitoringModule(BaseModule):
         :return: 监测数据列表
         """
         try:
-            sql = """
-            SELECT * FROM MonitoringData 
-            WHERE region_id = ? AND DataTime BETWEEN ? AND ? 
-            ORDER BY DataTime DESC
-            """
-            params = (region_id, start_time, end_time)
+            # 根据region_id是否为空，构建不同的SQL查询
+            if region_id is None or region_id == "":
+                # 查询所有区域的数据
+                sql = """
+                SELECT * FROM MonitoringData 
+                WHERE DataTime BETWEEN ? AND ? 
+                ORDER BY DataTime DESC
+                """
+                params = (start_time, end_time)
+            else:
+                # 查询特定区域的数据
+                sql = """
+                SELECT * FROM MonitoringData 
+                WHERE RegionID = ? AND DataTime BETWEEN ? AND ? 
+                ORDER BY DataTime DESC
+                """
+                params = (region_id, start_time, end_time)
             results = self.db.fetch_all(sql, params)
             
             monitor_data = []
@@ -143,7 +153,7 @@ class EnvironmentalMonitoringModule(BaseModule):
                 monitor_data.append({
                     'DataID': result[0],
                     'SensorID': result[1],
-                    'region_id': result[2],
+                    'RegionID': result[2],
                     'DataTime': result[3],
                     'Temperature': result[4],
                     'Humidity': result[5],

@@ -43,7 +43,7 @@ class ResourceManagementModule(BaseModule):
             update_time = datetime.datetime.now()
             
             sql = """
-            INSERT INTO ForestResource (ResourceID, region_id, ResourceType, CoverageArea, TreeSpecies, GrowthStatus, UpdateTime, UpdatedBy)
+            INSERT INTO ForestResource (ResourceID, RegionID, ResourceType, CoverageArea, TreeSpecies, GrowthStatus, UpdateTime, UpdatedBy)
             VALUES (?, ?, ?, ?, ?, ?, GETDATE(), ?)
             """
             params = (resource_id, region_id, resource_type, coverage_area, tree_species, growth_status, update_time, updated_by)
@@ -69,21 +69,20 @@ class ResourceManagementModule(BaseModule):
             params = []
             
             if coverage_area is not None:
-                update_fields.append("coverage_area = ?")
+                update_fields.append("CoverageArea = ?")
                 params.append(coverage_area)
             if tree_species is not None:
-                update_fields.append("tree_species = ?")
+                update_fields.append("TreeSpecies = ?")
                 params.append(tree_species)
             if growth_status is not None:
-                update_fields.append("growth_status = ?")
+                update_fields.append("GrowthStatus = ?")
                 params.append(growth_status)
             
             # 总是更新时间
-            update_fields.append("update_time = ?")
-            params.append(datetime.datetime.now())
+            update_fields.append("UpdateTime = GETDATE()")
             
             if updated_by is not None:
-                update_fields.append("updated_by = ?")
+                update_fields.append("UpdatedBy = ?")
                 params.append(updated_by)
             
             if not update_fields:
@@ -111,8 +110,9 @@ class ResourceManagementModule(BaseModule):
             conditions = []
             params = []
             
-            if region_id:
-                conditions.append("region_id = ?")
+            # 只有当region_id不为None且不为空字符串时才添加条件
+            if region_id is not None and region_id != "":
+                conditions.append("RegionID = ?")
                 params.append(region_id)
             
             where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
@@ -124,7 +124,7 @@ class ResourceManagementModule(BaseModule):
                 # 使用索引访问，兼容SQL Server
                 resources.append({
                     'resource_id': result[0],
-                    'region_id': result[1],
+                    'RegionID': result[1],
                     'resource_type': result[2],
                     'tree_species': result[3],
                     'quantity': result[4],

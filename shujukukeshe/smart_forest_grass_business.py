@@ -754,22 +754,58 @@ class DisasterWarningDatabase:
             result = self.db.fetch_one(sql, (username,))
             
             if result:
-                # 使用索引访问，适配SQL Server返回的结果
+                # 正确映射数据库字段，根据实际数据库结构调整
+                # 实际数据库结构：UserID, Username, Password, Name, Contact, Role, Status
                 user_info = {
                     'UserID': result[0],
                     'Username': result[1],
-                    'Name': result[2],
-                    'Contact': result[3],
-                    'Role': result[4],
-                    'Status': result[5]
+                    'Password': result[2],  # 第3列是密码
+                    'Name': result[3],       # 第4列是姓名
+                    'Contact': result[4],    # 第5列是联系方式
+                    'Role': result[5],       # 第6列是角色
+                    'Status': result[6]      # 第7列是状态
                 }
-                # 处理Password字段
-                user_info['Password'] = "123456"  # 默认密码
                 return user_info
             return None
         except Exception as e:
             print(f"获取用户信息失败: {e}")
             return None
+    
+    # 获取用户列表
+    def get_users(self, role=None):
+        """
+        获取用户列表，支持按角色过滤
+        :param role: 角色（可选）
+        :return: 用户列表
+        """
+        try:
+            # SQL Server表名引用（User是关键字，需要用[]括起来）
+            table_name = "[User]"
+            # 实际数据库结构：UserID, Username, Password, Name, Contact, Role, Status
+            if role:
+                sql = f"SELECT * FROM {table_name} WHERE Role = ?"
+                users = self.db.fetch_all(sql, (role,))
+            else:
+                # 获取所有用户
+                sql = f"SELECT * FROM {table_name}"
+                users = self.db.fetch_all(sql)
+            
+            user_list = []
+            for user in users:
+                # 正确映射数据库字段，根据实际数据库结构调整
+                user_info = {
+                    'UserID': user[0],
+                    'Username': user[1],
+                    'Name': user[3],       # 第4列是姓名
+                    'Role': user[5],       # 第6列是角色
+                    'Contact': user[4],    # 第5列是联系方式
+                    'Status': user[6]      # 第7列是状态
+                }
+                user_list.append(user_info)
+            return user_list
+        except Exception as e:
+            print(f"获取用户列表失败: {e}")
+            return []
     
     # 复杂SQL查询方法 - 覆盖不同业务场景
     def complex_queries(self, query_type, **kwargs):
@@ -820,7 +856,7 @@ class DisasterWarningDatabase:
                     SUM(CASE WHEN ds.RunningStatus = '故障' THEN 1 ELSE 0 END) AS FaultCount,
                     0 AS InspectionCount
                 FROM Region r
-                LEFT JOIN DeviceArchive da ON r.region_id = da.region_id
+                LEFT JOIN DeviceArchive da ON r.RegionID = da.RegionID
                 LEFT JOIN DeviceStatus ds ON da.DeviceID = ds.DeviceID
                 WHERE ds.CollectionTime BETWEEN ? AND ?
                 GROUP BY r.region_name
