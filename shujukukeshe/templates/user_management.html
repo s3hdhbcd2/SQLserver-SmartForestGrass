@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="navbar">
+        <h1>智能森林草原监测预警系统</h1>
+        <div class="user-info">
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})</span>
+            <a href="/logout" class="logout-btn">退出登录</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu" id="menu"></div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h2 class="page-title">用户管理</h2>
+            
+            <div class="card">
+                <h3>添加新用户</h3>
+                <form>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                        <div class="form-group">
+                            <label for="username">用户名</label>
+                            <input type="text" id="username" name="username" placeholder="请输入用户名">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">密码</label>
+                            <input type="password" id="password" name="password" placeholder="请输入密码">
+                        </div>
+                        <div class="form-group">
+                            <label for="name">姓名</label>
+                            <input type="text" id="name" name="name" placeholder="请输入真实姓名">
+                        </div>
+                        <div class="form-group">
+                                <label for="role">角色</label>
+                                <select id="role" name="role">
+                                    <option value="系统管理员">系统管理员</option>
+                                    <option value="管理员">管理员</option>
+                                    <option value="数据管理员">数据管理员</option>
+                                    <option value="区域护林员">区域护林员</option>
+                                    <option value="公众用户">公众用户</option>
+                                    <option value="监管人员">监管人员</option>
+                                </select>
+                            </div>
+                        <div class="form-group">
+                            <label for="contact_info">联系方式</label>
+                            <input type="text" id="contact_info" name="contact_info" placeholder="请输入联系方式">
+                        </div>
+                        <div class="form-group">
+                            <label for="status">状态</label>
+                            <select id="status" name="status">
+                                <option value="启用">启用</option>
+                                <option value="禁用">禁用</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">添加用户</button>
+                        <button type="reset" class="btn btn-secondary" style="margin-left: 0.5rem;">重置</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h3>用户列表</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label for="role-filter">按角色查询：</label>
+                    <select id="role-filter" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">全部角色</option>
+                        <option value="系统管理员">系统管理员</option>
+                        <option value="管理员">管理员</option>
+                        <option value="数据管理员">数据管理员</option>
+                        <option value="区域护林员">区域护林员</option>
+                        <option value="公众用户">公众用户</option>
+                        <option value="监管人员">监管人员</option>
+                    </select>
+                </div>
+                <table class="table" id="users-table">
+                    <thead>
+                        <tr>
+                            <th>用户ID</th>
+                            <th>用户名</th>
+                            <th>姓名</th>
+                            <th>角色</th>
+                            <th>联系方式</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: #999;">用户信息将在此处显示</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 用户编辑模态框 -->
+            <div id="user-edit-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeEditModal()">&times;</span>
+                    <h3>编辑用户</h3>
+                    <form id="edit-user-form">
+                        <input type="hidden" id="edit-user-id" name="user_id">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                            <div class="form-group">
+                                <label for="edit-username">用户名</label>
+                                <input type="text" id="edit-username" name="username" placeholder="请输入用户名">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-name">姓名</label>
+                                <input type="text" id="edit-name" name="name" placeholder="请输入真实姓名">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-role">角色</label>
+                                <select id="edit-role" name="role">
+                                    <option value="系统管理员">系统管理员</option>
+                                    <option value="管理员">管理员</option>
+                                    <option value="数据管理员">数据管理员</option>
+                                    <option value="区域护林员">区域护林员</option>
+                                    <option value="公众用户">公众用户</option>
+                                    <option value="监管人员">监管人员</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-contact">联系方式</label>
+                                <input type="text" id="edit-contact" name="contact" placeholder="请输入联系方式">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit-status">状态</label>
+                                <select id="edit-status" name="status">
+                                    <option value="启用">启用</option>
+                                    <option value="禁用">禁用</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()" style="margin-left: 0.5rem;">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- 引入用户管理页面专用JavaScript文件 -->
+    <script src="/static/js/user_management.js"></script>
+{% endblock %}

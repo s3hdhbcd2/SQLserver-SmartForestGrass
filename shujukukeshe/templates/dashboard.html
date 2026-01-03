@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="navbar">
+        <h1>智能森林草原监测预警系统</h1>
+        <div class="user-info">
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
+            <a href="/logout" class="logout-btn">退出登录</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu" id="menu"></div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h2 class="page-title">系统首页</h2>
+            
+            <div class="card">
+                <h3>系统概述</h3>
+                <p>智能森林草原监测预警系统是一个集成环境监测、灾害预警、资源管理、设备管理和统计分析的综合平台。</p>
+                <p>根据您的角色，您可以访问以下功能模块：</p>
+                <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+                    <li>环境监测 - 实时监测森林草原的环境数据</li>
+                    <li>灾害预警 - 接收和管理灾害预警信息</li>
+                    <li>资源管理 - 管理森林草原资源信息</li>
+                    <li>设备管理 - 管理监测设备的运行状态</li>
+                    <li>统计分析 - 查看系统数据统计和分析报告</li>
+                    {% if user['Role'] == '管理员' %}
+                    <li>用户管理 - 管理系统用户账号</li>
+                    {% endif %}
+                </ul>
+            </div>
+            
+            <div class="card">
+                <h3>快速操作</h3>
+                <p>点击左侧菜单进入相应功能模块，开始使用系统功能。</p>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- 引入系统首页页面专用JavaScript文件 -->
+    <script src="/static/js/dashboard.js"></script>
+{% endblock %}
