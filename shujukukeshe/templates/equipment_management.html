@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="navbar">
+        <h1>智能森林草原监测预警系统</h1>
+        <div class="user-info">
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
+            <a href="/logout" class="logout-btn">退出登录</a>
+        </div>
+    </div>
+    
+    <!-- 嵌入用户管理区域数据 -->
+    <div id="user-data" 
+         data-role="{{ user['Role'] }}"
+         data-managed-regions='{{ user.get('ManagedRegions', []) | tojson | safe }}'
+         style="display: none;"></div>
+    
+    <script>
+        /* 从HTML数据属性获取用户信息，包括管理区域 */
+        document.addEventListener('DOMContentLoaded', function() {
+            const userDataElement = document.getElementById('user-data');
+            const role = userDataElement.dataset.role;
+            const managedRegions = JSON.parse(userDataElement.dataset.managedRegions);
+            
+            window.currentUser = {
+                Role: role,
+                ManagedRegions: managedRegions
+            };
+        });
+    </script>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu" id="menu"></div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h2 class="page-title">设备管理</h2>
+            
+            {% if user['Role'] == '管理员' or user['Role'] == '系统管理员' %}
+            <div class="card">
+                <h3>设备信息管理</h3>
+                <form id="equipment-form">
+                    <div class="form-group">
+                        <label for="equipment_name">设备名称</label>
+                        <input type="text" id="equipment_name" name="equipment_name" placeholder="请输入设备名称">
+                    </div>
+                    <div class="form-group">
+                        <label for="equipment_type">设备类型</label>
+                        <select id="equipment_type" name="equipment_type">
+                            <option value="传感器">传感器</option>
+                            <option value="摄像头">摄像头</option>
+                            <option value="预警器">预警器</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="model_specification">型号规格</label>
+                        <input type="text" id="model_specification" name="model_specification" placeholder="请输入型号规格">
+                    </div>
+                    <div class="form-group">
+                        <label for="installation_location">安装位置</label>
+                        <select id="installation_location" name="installation_location">
+                            <option value="">请选择区域</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="purchase_date">购买时间</label>
+                        <input type="date" id="purchase_date" name="purchase_date" value="{{ now.strftime('%Y-%m-%d') }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="warranty_period">质保期</label>
+                        <input type="text" id="warranty_period" name="warranty_period" placeholder="请输入质保期（如：3年）">
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">保存设备</button>
+                        <button type="reset" class="btn btn-secondary" style="margin-left: 0.5rem;">重置</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+            
+            <div class="card">
+                <h3>设备列表</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label for="device-region-select">选择区域：</label>
+                    <select id="device-region-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">全部区域</option>
+                    </select>
+                    <label for="device-type-select">设备类型：</label>
+                    <select id="device-type-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">全部类型</option>
+                        <option value="传感器">传感器</option>
+                        <option value="摄像头">摄像头</option>
+                        <option value="预警器">预警器</option>
+                    </select>
+                    {% if user['Role'] != '管理员' and user['Role'] != '系统管理员' %}
+                    <label for="device-status-select">设备状态：</label>
+                    <select id="device-status-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">全部状态</option>
+                        <option value="正常">正常</option>
+                        <option value="异常">异常</option>
+                        <option value="故障">故障</option>
+                        <option value="维护中">维护中</option>
+                        <option value="离线">离线</option>
+                    </select>
+                    {% endif %}
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>设备ID</th>
+                            <th>设备名称</th>
+                            <th>设备类型</th>
+                            <th>型号规格</th>
+                            <th>购买时间</th>
+                            <th>安装位置</th>
+                            {% if user['Role'] != '管理员' and user['Role'] != '系统管理员' %}
+                            <th>设备状态</th>
+                            {% endif %}
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devices-table">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #999;">选择区域和设备类型，点击查询按钮加载数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if user['Role'] != '管理员' and user['Role'] != '系统管理员' %}
+            <div class="card">
+                <h3>设备状态查询</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label for="device-id-select">选择设备：</label>
+                    <select id="device-id-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">请先选择设备</option>
+                    </select>
+                    <label for="status-start-time">开始时间：</label>
+                    <input type="datetime-local" id="status-start-time" style="padding: 0.5rem; margin-right: 1rem;">
+                    <label for="status-end-time">结束时间：</label>
+                    <input type="datetime-local" id="status-end-time" style="padding: 0.5rem; margin-right: 1rem;">
+                    <button class="btn btn-primary" onclick="loadDeviceStatus()">查询</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>状态ID</th>
+                            <th>设备ID</th>
+                            <th>运行状态</th>
+                            <th>电池电量</th>
+                            <th>信号强度</th>
+                            <th>采集时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="device-status-table">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #999;">选择设备和时间范围，点击查询按钮加载状态数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 添加设备巡检记录 -->
+            <div class="card">
+                <h3>添加设备巡检记录</h3>
+                <form id="add-inspection-form">
+                    <div class="form-group">
+                        <label for="inspection-device-id">设备ID：</label>
+                        <select id="inspection-device-id" name="device_id" style="padding: 0.5rem; width: 100%; margin-bottom: 1rem;">
+                            <option value="">请选择设备</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenance-type">维护类型：</label>
+                        <select id="maintenance-type" name="maintenance_type" style="padding: 0.5rem; width: 100%; margin-bottom: 1rem;">
+                            <option value="巡检">巡检</option>
+                            <option value="维修">维修</option>
+                            <option value="更换">更换</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="inspection-result">巡检结果：</label>
+                        <select id="inspection-result" name="inspection_result" style="padding: 0.5rem; width: 100%; margin-bottom: 1rem;">
+                            <option value="正常">正常</option>
+                            <option value="异常">异常</option>
+                            <option value="故障">故障</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="problem-description">问题描述：</label>
+                        <textarea id="problem-description" name="problem_description" rows="3" style="padding: 0.5rem; width: 100%; margin-bottom: 1rem;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenance-content">维护内容：</label>
+                        <textarea id="maintenance-content" name="maintenance_content" rows="3" style="padding: 0.5rem; width: 100%; margin-bottom: 1rem;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="maintenance-result">维护结果：</label>
+                        <textarea id="maintenance-result" name="maintenance_result" rows="3" style="padding: 0.5rem; width: 100%; margin-bottom: 1rem;"></textarea>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">保存记录</button>
+                        <button type="reset" class="btn btn-secondary" style="margin-left: 0.5rem;">重置</button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- 设备维护记录 -->
+            <div class="card">
+                <h3>设备维护历史记录</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label for="maintenance-device-id-select">选择设备：</label>
+                    <select id="maintenance-device-id-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">请先选择设备</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="loadMaintenanceRecords()">查询维护记录</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>巡检ID</th>
+                            <th>设备ID</th>
+                            <th>巡检时间</th>
+                            <th>巡检人员ID</th>
+                            <th>维护类型</th>
+                            <th>巡检结果</th>
+                            <th>问题描述</th>
+                            <th>维护内容</th>
+                            <th>维护结果</th>
+                            <th>审核状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="maintenance-records-table">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="11" style="text-align: center; color: #999;">选择设备，点击查询按钮加载维护历史记录</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 设备维护审核模态框 -->
+            <div id="maintenance-audit-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeMaintenanceAuditModal()">&times;</span>
+                    <h3>审核设备维护记录</h3>
+                    <form id="maintenance-audit-form">
+                        <input type="hidden" id="audit-inspection-id" name="inspection_id">
+                        <div class="form-group">
+                            <label for="maintenance-audit-status">审核状态</label>
+                            <select id="maintenance-audit-status" name="audit_status" required>
+                                <option value="通过">通过</option>
+                                <option value="拒绝">拒绝</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="maintenance-audit-comments">审核意见</label>
+                            <textarea id="maintenance-audit-comments" name="audit_comments" rows="4" placeholder="请输入审核意见" required></textarea>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button type="submit" class="btn btn-primary">提交审核</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeMaintenanceAuditModal()" style="margin-left: 0.5rem;">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 设备编辑模态框 -->
+            <div id="equipment-edit-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeEditModal()">&times;</span>
+                    <h3>设备编辑</h3>
+                    <form id="edit-equipment-form">
+                        <input type="hidden" name="equipment_id" id="edit-equipment_id">
+                        
+                        {% if user['Role'] == '管理员' or user['Role'] == '系统管理员' %}
+                        <!-- 管理员可以编辑所有字段 -->
+                        <div class="form-group">
+                            <label for="edit-equipment_name">设备名称</label>
+                            <input type="text" id="edit-equipment_name" name="equipment_name" placeholder="请输入设备名称">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-equipment_type">设备类型</label>
+                            <select id="edit-equipment_type" name="equipment_type">
+                                <option value="传感器">传感器</option>
+                                <option value="摄像头">摄像头</option>
+                                <option value="预警器">预警器</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-model_specification">型号规格</label>
+                            <input type="text" id="edit-model_specification" name="model_specification" placeholder="请输入型号规格">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-installation_location">安装位置</label>
+                            <select id="edit-installation_location" name="installation_location">
+                                <option value="">请选择区域</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-purchase_date">购买时间</label>
+                            <input type="date" id="edit-purchase_date" name="purchase_date">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-warranty_period">质保期</label>
+                            <input type="text" id="edit-warranty_period" name="warranty_period" placeholder="请输入质保期（如：3年）">
+                        </div>
+                        {% endif %}
+                        
+                        <!-- 区域护林员只能编辑设备状态 -->
+                        {% if user['Role'] != '管理员' and user['Role'] != '系统管理员' %}
+                        <div class="form-group">
+                            <label for="edit-equipment_status">设备状态</label>
+                            <select id="edit-equipment_status" name="equipment_status">
+                                <option value="正常">正常</option>
+                                <option value="故障">故障</option>
+                                <option value="维护中">维护中</option>
+                                <option value="离线">离线</option>
+                            </select>
+                        </div>
+                        {% endif %}
+                        
+                        <div style="margin-top: 1rem;">
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()" style="margin-left: 0.5rem;">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- 设备详情模态框 -->
+            <div id="equipment-detail-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeDetailModal()">&times;</span>
+                    <h3>设备详情</h3>
+                    <div id="equipment-detail-content" class="detail-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- 引入设备管理页面专用JavaScript文件 -->
+    <script src="/static/js/equipment_management.js"></script>
+{% endblock %}
