@@ -1,0 +1,199 @@
+-- sql/01_full_tables.sql
+-- 林草资源智能监测系统 - 完整建表脚本（支持全部 5 大业务线）
+-- 日期：2026年1月
+
+-- ========== 1. 用户表 ==========
+CREATE TABLE IF NOT EXISTS user (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci UNIQUE NOT NULL,
+    password_hash CHAR(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'SHA256 或 bcrypt 哈希',
+    real_name VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    role ENUM('admin', 'data_admin', 'ranger', 'supervisor', 'public')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 2. 区域表 ==========
+CREATE TABLE IF NOT EXISTS region (
+    region_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY,
+    region_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    region_type ENUM('forest', 'grassland') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    latitude DECIMAL(10,8) NOT NULL,
+    longitude DECIMAL(11,8) NOT NULL,
+    manager_id INT NULL,
+    FOREIGN KEY (manager_id) REFERENCES user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 3. 设备档案表（设备管理核心）==========
+CREATE TABLE IF NOT EXISTS device (
+    device_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY,
+    device_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    device_type ENUM('sensor', 'camera', 'alerter')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    model VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    protocol VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '通信协议，如 LoRa/NB-IoT',
+    purchase_time DATE,
+    region_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    installer_id INT,
+    warranty_months INT COMMENT '质保期（月）',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (region_id) REFERENCES region(region_id),
+    FOREIGN KEY (installer_id) REFERENCES user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 4. 传感器表（作为 device 的子集）==========
+CREATE TABLE IF NOT EXISTS sensor (
+    sensor_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY,
+    region_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    monitor_type ENUM('temperature', 'humidity', 'image')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    install_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sensor_id) REFERENCES device(device_id),  -- 传感器是设备的一种
+    FOREIGN KEY (region_id) REFERENCES region(region_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 5. 监测数据表 ==========
+CREATE TABLE IF NOT EXISTS monitoring_data (
+    data_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    sensor_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    collect_time DATETIME NOT NULL,
+    value_number DECIMAL(10,2) NULL COMMENT '用于温度、湿度等数值',
+    value_text TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '用于图像路径等文本',
+    data_status ENUM('valid', 'invalid') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'valid',
+    reviewed_by INT NULL,
+    review_note TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    reviewed_at DATETIME NULL,
+    FOREIGN KEY (sensor_id) REFERENCES sensor(sensor_id),
+    FOREIGN KEY (reviewed_by) REFERENCES user(user_id),
+    INDEX idx_sensor_time (sensor_id, collect_time),
+    INDEX idx_collect_time (collect_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 6. 设备状态表 ==========
+CREATE TABLE IF NOT EXISTS device_status (
+    status_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    collect_time DATETIME NOT NULL,
+    status ENUM('normal', 'fault', 'offline')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    battery_level TINYINT UNSIGNED COMMENT '0-100%',
+    signal_strength TINYINT UNSIGNED COMMENT '0-100%',
+    FOREIGN KEY (device_id) REFERENCES device(device_id),
+    INDEX idx_device_time (device_id, collect_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 7. 维护记录表 ==========
+CREATE TABLE IF NOT EXISTS maintenance_record (
+    record_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    device_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    maintenance_type ENUM('inspection', 'repair', 'replacement')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    maintenance_time DATETIME NOT NULL,
+    maintainer_id INT NOT NULL,
+    content TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    result TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    FOREIGN KEY (device_id) REFERENCES device(device_id),
+    FOREIGN KEY (maintainer_id) REFERENCES user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 8. 预警规则表 ==========
+CREATE TABLE IF NOT EXISTS alert_rule (
+    rule_id INT AUTO_INCREMENT PRIMARY KEY,
+    alert_type VARCHAR(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '如: fire, drought, pest',
+    trigger_condition TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '如: temperature > 38 AND humidity < 20',
+    severity_level TINYINT NOT NULL COMMENT '1=一般, 2=较重, 3=严重, 4=特别严重',
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 9. 预警记录表 ==========
+CREATE TABLE IF NOT EXISTS alert_record (
+    record_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    rule_id INT NOT NULL,
+    region_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    triggered_time DATETIME NOT NULL,
+    content TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    status ENUM('unhandled', 'handling', 'resolved')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'unhandled',
+    handler_id INT NULL,
+    result TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    resolved_at DATETIME NULL,
+    FOREIGN KEY (rule_id) REFERENCES alert_rule(rule_id),
+    FOREIGN KEY (region_id) REFERENCES region(region_id),
+    FOREIGN KEY (handler_id) REFERENCES user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 10. 通知记录表 ==========
+CREATE TABLE IF NOT EXISTS notification (
+    notify_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    record_id BIGINT NOT NULL,
+    receiver_id INT NOT NULL,
+    message TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    notify_method ENUM('sms', 'system')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'system',
+    delivery_status ENUM('sent', 'failed', 'delivered')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT 'sent',
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_read BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (record_id) REFERENCES alert_record(record_id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES user(user_id),
+    INDEX idx_receiver_unread (receiver_id, is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 11. 林草资源表 ==========
+CREATE TABLE IF NOT EXISTS resource (
+    resource_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci PRIMARY KEY,
+    region_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    resource_type ENUM('tree', 'grass') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    species_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    quantity_or_area DECIMAL(12,2) NOT NULL COMMENT '树=数量(株), 草=面积(亩)',
+    growth_stage ENUM('seedling', 'growing', 'mature')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    planted_at DATE,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    creator_id INT NOT NULL,
+    FOREIGN KEY (region_id) REFERENCES region(region_id),
+    FOREIGN KEY (creator_id) REFERENCES user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 12. 资源变动记录表 ==========
+CREATE TABLE IF NOT EXISTS resource_change_log (
+    log_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    resource_id VARCHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    change_type ENUM('add', 'reduce', 'update')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    reason TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    changed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    operator_id INT NOT NULL,
+    FOREIGN KEY (resource_id) REFERENCES resource(resource_id) ON DELETE CASCADE,
+    FOREIGN KEY (operator_id) REFERENCES user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 13. 报表模板表 ==========
+CREATE TABLE IF NOT EXISTS report_template (
+    template_id INT AUTO_INCREMENT PRIMARY KEY,
+    template_name VARCHAR(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    dimensions JSON COMMENT '统计维度，如 ["region", "time", "type"]',
+    metrics JSON COMMENT '统计指标，如 ["avg_temp", "total_alerts", "tree_count"]',
+    generation_cycle ENUM('daily', 'weekly', 'monthly')
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    creator_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (creator_id) REFERENCES user(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========== 14. 生成报表表 ==========
+CREATE TABLE IF NOT EXISTS generated_report (
+    report_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    template_id INT NOT NULL,
+    period VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '如 "2026-01"',
+    generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    file_path VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+    data_sources TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+    FOREIGN KEY (template_id) REFERENCES report_template(template_id) ON DELETE CASCADE,
+    INDEX idx_template_period (template_id, period)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
