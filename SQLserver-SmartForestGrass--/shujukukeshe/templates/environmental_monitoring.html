@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="navbar">
+        <h1>智能森林草原监测预警系统</h1>
+        <div class="user-info">
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
+            <a href="/logout" class="logout-btn">退出登录</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu" id="menu"></div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h2 class="page-title">环境监测</h2>
+            
+            <div class="card">
+                <h3>实时环境数据</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background-color: #f0f8ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <h4>温度</h4>
+                        <div style="font-size: 2rem; font-weight: 600; color: #3498db;" id="realtime-temperature">--</div>
+                        <div style="font-size: 0.9rem; color: #666;">°C</div>
+                    </div>
+                    <div style="background-color: #f0fff4; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <h4>湿度</h4>
+                        <div style="font-size: 2rem; font-weight: 600; color: #2ecc71;" id="realtime-humidity">--</div>
+                        <div style="font-size: 0.9rem; color: #666;">%</div>
+                    </div>
+                    <div style="background-color: #fffaf0; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <h4>风速</h4>
+                        <div style="font-size: 2rem; font-weight: 600; color: #f39c12;" id="realtime-windspeed">--</div>
+                        <div style="font-size: 0.9rem; color: #666;">m/s</div>
+                    </div>
+                    <div style="background-color: #faf0ff; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <h4>降雨量</h4>
+                        <div style="font-size: 2rem; font-weight: 600; color: #9b59b6;" id="realtime-rainfall">--</div>
+                        <div style="font-size: 0.9rem; color: #666;">mm</div>
+                    </div>
+                </div>
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="refreshEnvironmentData()">刷新数据</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>环境数据列表</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label for="env-region-select">选择区域：</label>
+                    <select id="env-region-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">全部区域</option>
+                    </select>
+                    <label for="start-time">开始时间：</label>
+                    <input type="datetime-local" id="start-time" style="padding: 0.5rem; margin-right: 1rem;">
+                    <label for="end-time">结束时间：</label>
+                    <input type="datetime-local" id="end-time" style="padding: 0.5rem; margin-right: 1rem;">
+                    <button class="btn btn-primary" onclick="loadEnvironmentData()">查询</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>监测点ID</th>
+                            <th>温度 (°C)</th>
+                            <th>湿度 (%)</th>
+                            <th>风速 (m/s)</th>
+                            <th>降雨量 (mm)</th>
+                            <th>监测时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="environment-data-table">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #999;">选择区域和时间范围，点击查询按钮加载数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 公众用户异常情况反馈 -->
+            {% if user['Role'] != '区域护林员' %}
+            <div class="card">
+                <h3>林草资源异常情况反馈</h3>
+                <form id="feedback-form">
+                    <div class="form-group">
+                        <label for="feedback-type">异常类型</label>
+                        <select id="feedback-type" name="feedback-type" required>
+                            <option value="火灾">火灾</option>
+                            <option value="病虫害">病虫害</option>
+                            <option value="旱情">旱情</option>
+                            <option value="大风">大风</option>
+                            <option value="洪水">洪水</option>
+                            <option value="其他">其他异常</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-region">发生区域</label>
+                        <select id="feedback-region" name="feedback-region" required>
+                            <option value="">请选择区域</option>
+                            <!-- 区域选项将通过JavaScript动态加载 -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-description">详细描述</label>
+                        <textarea id="feedback-description" name="feedback-description" rows="4" required placeholder="请详细描述您发现的异常情况"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="feedback-contact">联系方式</label>
+                        <input type="text" id="feedback-contact" name="feedback-contact" required placeholder="请输入您的联系方式，以便我们与您联系">
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">提交反馈</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- 引入环境监测页面专用JavaScript文件 -->
+    <script src="/static/js/environmental_monitoring.js"></script>
+{% endblock %}
