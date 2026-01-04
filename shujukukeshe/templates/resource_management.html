@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="navbar">
+        <h1>智能森林草原监测预警系统</h1>
+        <div class="user-info">
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
+            <a href="/logout" class="logout-btn">退出登录</a>
+        </div>
+    </div>
+    
+    <!-- 嵌入用户管理区域数据 -->
+    <div id="user-data" 
+         data-role="{{ user['Role'] }}"
+         data-user-id="{{ user['UserID'] }}"
+         data-managed-regions='{{ user.get('ManagedRegions', []) | tojson | safe }}'
+         style="display: none;"></div>
+    
+    <script>
+        /* 从HTML数据属性获取用户信息，包括管理区域和用户ID */
+        document.addEventListener('DOMContentLoaded', function() {
+            const userDataElement = document.getElementById('user-data');
+            const role = userDataElement.dataset.role;
+            const userId = userDataElement.dataset.userId;
+            const managedRegions = JSON.parse(userDataElement.dataset.managedRegions);
+            
+            window.currentUser = {
+                Role: role,
+                UserID: userId,
+                ManagedRegions: managedRegions
+            };
+            
+            // 将用户ID自动填充到更新人ID字段（仅当元素存在时）
+            const updatedByElement = document.getElementById('updated_by');
+            if (updatedByElement) {
+                updatedByElement.value = userId;
+            }
+        });
+    </script>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu" id="menu"></div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h2 class="page-title">资源管理</h2>
+            
+            {% if user['Role'] not in ['监管人员', '区域护林员'] %}
+            <div class="card">
+                <h3>资源信息录入</h3>
+                <form id="resource-form">
+                    <input type="hidden" id="resource_id" name="resource_id">
+                    <div class="form-group">
+                        <label for="region_id">区域ID</label>
+                        <select id="region_id" name="region_id">
+                            <option value="">请选择区域</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="resource_type">资源类型</label>
+                        <select id="resource_type" name="resource_type">
+                            <option value="森林">森林资源</option>
+                            <option value="草原">草原资源</option>
+                            <option value="湿地">湿地资源</option>
+                            <option value="其他">其他资源</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tree_species">树种</label>
+                        <input type="text" id="tree_species" name="tree_species" placeholder="请输入树种">
+                    </div>
+                    <div class="form-group">
+                        <label for="coverage_area">覆盖面积 (公顷)</label>
+                        <input type="number" id="coverage_area" name="coverage_area" step="0.01" placeholder="请输入覆盖面积">
+                    </div>
+                    <div class="form-group">
+                        <label for="growth_status">生长状态</label>
+                        <select id="growth_status" name="growth_status">
+                            <option value="良好">良好</option>
+                            <option value="一般">一般</option>
+                            <option value="较差">较差</option>
+                        </select>
+                    </div>
+                    <!-- 更新人ID由系统自动设置为当前登录用户ID，无需手动输入 -->
+                    <input type="hidden" id="updated_by" name="updated_by">
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">保存资源</button>
+                        <button type="reset" class="btn btn-secondary" style="margin-left: 0.5rem;">重置</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="card">
+                <h3>资源信息列表</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label for="resource-region-select">选择区域：</label>
+                    <select id="resource-region-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">全部区域</option>
+                        <!-- 区域选项将通过JavaScript动态加载 -->
+                    </select>
+
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>资源ID</th>
+                            <th>资源类型</th>
+                            <th>资源名称</th>
+                            <th>地理位置</th>
+                            <th>面积 (公顷)</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resources-table">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: #999;">选择区域，点击查询按钮加载数据</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 资源详情模态框 -->
+            <div id="resource-detail-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeDetailModal()">&times;</span>
+                    <h3>资源详情</h3>
+                    <div id="resource-detail-content" class="detail-content"></div>
+                </div>
+            </div>
+            
+            <!-- 资源编辑模态框 -->
+            <div id="resource-edit-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeEditModal()">&times;</span>
+                    <h3>资源编辑</h3>
+                    <form id="edit-resource-form">
+                        <input type="hidden" id="edit-resource_id" name="resource_id">
+                        <div class="form-group">
+                            <label for="edit-region_id">区域ID</label>
+                            <select id="edit-region_id" name="region_id">
+                                <option value="">请选择区域</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-resource_type">资源类型</label>
+                            <select id="edit-resource_type" name="resource_type">
+                                <option value="森林">森林资源</option>
+                                <option value="草原">草原资源</option>
+                                <option value="湿地">湿地资源</option>
+                                <option value="其他">其他资源</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-tree_species">树种</label>
+                            <input type="text" id="edit-tree_species" name="tree_species" placeholder="请输入树种">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-coverage_area">覆盖面积 (公顷)</label>
+                            <input type="number" id="edit-coverage_area" name="coverage_area" step="0.01" placeholder="请输入覆盖面积">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-growth_status">生长状态</label>
+                            <select id="edit-growth_status" name="growth_status">
+                                <option value="良好">良好</option>
+                                <option value="一般">一般</option>
+                                <option value="较差">较差</option>
+                            </select>
+                        </div>
+                        <!-- 更新人ID由系统自动设置为当前登录用户ID，无需手动输入 -->
+                    <input type="hidden" id="edit-updated_by" name="updated_by">
+                        <div style="margin-top: 1rem;">
+                            <button type="submit" class="btn btn-primary">保存修改</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeEditModal()" style="margin-left: 0.5rem;">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if user['Role'] not in ['数据管理员'] %}
+            <div class="card">
+                <h3>添加资源变动记录</h3>
+                <form id="resource-change-form">
+                    <div class="form-group">
+                        <label for="change-resource-id">资源名称</label>
+                        <select id="change-resource-id" name="resource_id" required>
+                            <option value="">请选择资源</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="change-type">变动类型</label>
+                        <select id="change-type" name="change_type" required>
+                            <option value="新增">新增</option>
+                            <option value="更新">更新</option>
+                            <option value="删除">删除</option>
+                            <option value="状态变更">状态变更</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="change-reason">变动原因</label>
+                        <textarea id="change-reason" name="change_reason" rows="3" placeholder="请输入变动原因" required></textarea>
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <button type="submit" class="btn btn-primary">提交变动记录</button>
+                        <button type="reset" class="btn btn-secondary" style="margin-left: 0.5rem;">重置</button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+            
+            {% if user['Role'] not in ['数据管理员'] %}
+            <div class="card">
+                <h3>资源变动记录</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label for="resource-id-input">资源ID：</label>
+                    <input type="text" id="resource-id-input" style="padding: 0.5rem; margin-right: 1rem;" placeholder="输入资源ID查询变动记录">
+                    <button class="btn btn-primary" onclick="loadResourceChanges()">查询</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>变动ID</th>
+                            <th>资源ID</th>
+                            <th>变动类型</th>
+                            <th>变动原因</th>
+                            <th>变动时间</th>
+                            <th>操作人</th>
+                            <th>审核状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resource-changes-table">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #999;">输入资源ID，点击查询按钮加载变动记录</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 资源变动审核模态框 -->
+            <div id="resource-audit-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeResourceAuditModal()">&times;</span>
+                    <h3>审核资源变动</h3>
+                    <form id="resource-audit-form">
+                        <input type="hidden" id="audit-change-id" name="change_id">
+                        <div class="form-group">
+                            <label for="audit-status">审核状态</label>
+                            <select id="audit-status" name="audit_status" required>
+                                <option value="通过">通过</option>
+                                <option value="拒绝">拒绝</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="audit-comments">审核意见</label>
+                            <textarea id="audit-comments" name="audit_comments" rows="4" placeholder="请输入审核意见" required></textarea>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button type="submit" class="btn btn-primary">提交审核</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeResourceAuditModal()" style="margin-left: 0.5rem;">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- 引入资源管理页面专用JavaScript文件 -->
+    <script src="/static/js/resource_management.js"></script>
+{% endblock %}
