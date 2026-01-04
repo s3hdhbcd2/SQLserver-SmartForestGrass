@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="navbar">
+        <h1>智能森林草原监测预警系统</h1>
+        <div class="user-info">
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})</span>
+            <a href="javascript:confirmLogout()" class="logout-btn">退出登录</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu" id="menu"></div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h2 class="page-title">反馈管理</h2>
+            
+            <div class="card">
+                <h3>反馈信息列表</h3>
+                <div style="margin-bottom: 1rem;">
+                    <label for="feedback-status-select">选择状态：</label>
+                    <select id="feedback-status-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">全部状态</option>
+                        <option value="待处理">待处理</option>
+                        <option value="处理中">处理中</option>
+                        <option value="已处理">已处理</option>
+                    </select>
+                    <label for="feedback-region-select">选择区域：</label>
+                    <select id="feedback-region-select" style="padding: 0.5rem; margin-right: 1rem;">
+                        <option value="">全部区域</option>
+                        <!-- 区域选项将通过JavaScript动态加载 -->
+                    </select>
+                    <button class="btn btn-primary" onclick="loadFeedbacks()">查询</button>
+                </div>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>反馈ID</th>
+                        <th>反馈类型</th>
+                        <th>区域名称</th>
+                        <th>详细描述</th>
+                        <th>联系方式</th>
+                        <th>提交时间</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="feedbacks-table">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                        <tr>
+                            <td colspan="8" style="text-align: center; color: #999;">数据加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 反馈详情模态框 -->
+            <div id="feedback-detail-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeDetailModal()">&times;</span>
+                    <h3>反馈详情</h3>
+                    <div id="feedback-detail-content" class="detail-content"></div>
+                </div>
+            </div>
+            
+            <!-- 反馈处理模态框 -->
+            <div id="feedback-handle-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeHandleModal()">&times;</span>
+                    <h3>处理反馈</h3>
+                    <form id="feedback-handle-form">
+                        <input type="hidden" id="handle-feedback-id" name="feedback_id">
+                        <div class="form-group">
+                            <label for="handle-status">处理状态</label>
+                            <select id="handle-status" name="status" required>
+                                <option value="处理中">处理中</option>
+                                <option value="已处理">已处理</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="handle-result">处理结果</label>
+                            <textarea id="handle-result" name="handle_result" rows="4" placeholder="请输入处理结果"></textarea>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <button type="submit" class="btn btn-primary">保存处理结果</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeHandleModal()" style="margin-left: 0.5rem;">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- 引入反馈管理页面专用JavaScript文件 -->
+    <script src="/static/js/feedback_management.js"></script>
+{% endblock %}
