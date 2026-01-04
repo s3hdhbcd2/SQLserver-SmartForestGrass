@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="navbar">
+        <h1>智能森林草原监测预警系统</h1>
+        <div class="user-info">
+            <span>欢迎，{{ user['Name'] }} ({{ user['Role'] }})
+            {% if user['Role'] == '区域护林员' and user.get('ManagedRegions') %}
+                {% for region in user['ManagedRegions'] %}
+                    {% if loop.first %}(负责区域: {% endif %}
+                    {{ region['RegionName'] }}{% if not loop.last %}, {% endif %}
+                    {% if loop.last %}){% endif %}
+                {% endfor %}
+            {% endif %}
+            </span>
+            <a href="javascript:confirmLogout()" class="logout-btn">退出登录</a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="menu" id="menu"></div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <h2 class="page-title">统计分析</h2>
+            <!-- 隐藏的用户角色信息，用于JavaScript判断 -->
+            <input type="hidden" id="user-role" value="{{ user['Role'] }}">
+            
+            <!-- 数据管理员专属功能：生成报表 -->
+            {% if user['Role'] == '数据管理员' %}
+            <div class="card">
+                <h3>生成统计报表</h3>
+                <form id="report-generation-form">
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label for="template-select">报表模板</label>
+                            <select id="template-select" name="template_id" class="form-control" required>
+                                <option value="">请选择报表模板</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="region-select">区域</label>
+                            <select id="region-select" name="region_id" class="form-control" required>
+                                <option value="">请选择区域</option>
+                            </select>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="start-time">开始时间</label>
+                            <input type="datetime-local" id="start-time" name="start_time" class="form-control" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="end-time">结束时间</label>
+                            <input type="datetime-local" id="end-time" name="end_time" class="form-control" required>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <button type="submit" class="btn btn-primary">生成报表</button>
+                    </div>
+                </form>
+            </div>
+            
+            {% endif %}
+            
+            <!-- 已发布报表列表 - 所有用户可见 -->
+            <div class="card" style="margin-top: 1rem;">
+                <h3>已发布报表</h3>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <!-- 系统管理员只能看到名称和详情，数据管理员可以看到完整信息 -->
+                                {% if user['Role'] == '数据管理员' %}
+                                    <th>报表ID</th>
+                                {% endif %}
+                                <th>报表名称</th>
+                                {% if user['Role'] == '数据管理员' %}
+                                    <th>模板名称</th>
+                                    <th>区域</th>
+                                    <th>生成时间</th>
+                                    <th>发布状态</th>
+                                    <th>操作</th>
+                                {% endif %}
+                                <th>详情</th>
+                            </tr>
+                        </thead>
+                        <tbody id="generated-reports-table">
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: #999;">数据加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 报表详情模态框 -->
+            <div id="report-detail-modal" class="modal">
+                <div class="modal-content" style="width: 80%; max-width: 1000px;">
+                    <span class="close" onclick="closeReportDetailModal()">&times;</span>
+                    <h3>报表详情</h3>
+                    <div id="report-detail-content">
+                        <p>正在加载报表详情...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 系统管理员专属功能：审核报表模板 -->
+            {% if user['Role'] == '系统管理员' %}
+            <div class="card">
+                <h3>审核报表模板</h3>
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>模板ID</th>
+                                <th>报表名称</th>
+                                <th>报表类型</th>
+                                <th>审核状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-templates-table">
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: #999;">数据加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 报表模板审核模态框 -->
+            <div id="template-audit-modal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeTemplateAuditModal()">&times;</span>
+                    <h3>审核报表模板</h3>
+                    <form id="template-audit-form">
+                        <input type="hidden" id="audit-template-id" name="template_id">
+                        <div class="form-group">
+                            <label for="audit-template-name">报表名称</label>
+                            <input type="text" id="audit-template-name" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="audit-status">审核状态</label>
+                            <select id="audit-status" name="audit_status" class="form-control" required>
+                                <option value="已通过">通过</option>
+                                <option value="已拒绝">拒绝</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="audit-comments">审核意见</label>
+                            <textarea id="audit-comments" name="audit_comments" rows="4" class="form-control" placeholder="请输入审核意见"></textarea>
+                        </div>
+                        <div style="margin-top: 1rem; text-align: right;">
+                            <button type="submit" class="btn btn-primary">提交审核</button>
+                            <button type="button" class="btn btn-secondary" onclick="closeTemplateAuditModal()" style="margin-left: 0.5rem;">取消</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 公开林草资源统计数据 - 数据管理员、系统管理员、区域护林员和监管人员不需要 -->
+            {% if user['Role'] not in ['数据管理员', '系统管理员', '区域护林员', '监管人员'] %}
+            <div class="card" style="margin-top: 1rem;">
+                <h3>林草资源统计数据</h3>
+                <p>以下是公开的林草资源统计数据，仅供参考：</p>
+                <div class="table-container" style="margin-bottom: 1rem;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>区域名称</th>
+                                <th>资源类型</th>
+                                <th>覆盖面积 (公顷)</th>
+                                <th>生长状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="forest-resources-table">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #999;">数据加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="text-align: right;">
+                    <button class="btn btn-primary" onclick="loadPublicForestResources()">刷新数据</button>
+                </div>
+            </div>
+            {% endif %}
+
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- 引入统计分析页面专用JavaScript文件 -->
+    <script src="/static/js/statistical_analysis.js"></script>
+{% endblock %}
